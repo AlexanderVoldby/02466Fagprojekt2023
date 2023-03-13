@@ -25,9 +25,7 @@ class torchNMF(torch.nn.Module):
         # Implementation of NMF - F(A, B) = ||X - AB||^2
         self.AB = torch.matmul(self.softplus(self.A),
                                self.softplus(self.B))
-        x = self.X - self.AB
-
-        return x
+        return self.AB
 
 
 torch.manual_seed(0)
@@ -36,7 +34,7 @@ nmf = torchNMF(X, 3)
 
 # optimizer for modifying learning rate, ADAM chosen because of https://machinelearningmastery.com/adam-optimization-algorithm-for-deep-learning/
 optimizer = torch.optim.Adam(nmf.parameters(), lr=0.3)
-
+lossFN = frobeniusLoss(X)
 # early stopping
 es = earlyStop(patience=5, offset=-0.1)
 
@@ -50,8 +48,8 @@ while (not es.trigger()):
     output = nmf()
 
     # backward
-    loss = frobeniusLoss()
-    loss = loss.forward(output)
+
+    loss = lossFN.forward(output)
     loss.backward()
 
     # Update A and B
@@ -62,6 +60,7 @@ while (not es.trigger()):
 
     # print loss
     print(f"epoch: {len(running_loss)}, Loss: {loss.item()}", end='\r')
+
 A, B = list(nmf.parameters())
 
 A = nmf.softplus(A)
@@ -70,16 +69,16 @@ B = nmf.softplus(B)
 A = A.detach().numpy()
 B = B.detach().numpy()
 
-rec = np.dot(A, B)
+# rec = np.dot(A, B)
 
-rec = rec.T
+# rec = rec.T
 
-rec_frame = pd.DataFrame(rec)
-rec_frame.columns = rec_frame.columns.astype(str)
+# rec_frame = pd.DataFrame(rec)
+# rec_frame.columns = rec_frame.columns.astype(str)
 
-rec_frame.to_parquet("recons_x_nmf.parquet",
-                     engine='fastparquet')
-import matplotlib.pyplot as plt
+# rec_frame.to_parquet("recons_x_nmf.parquet",
+                     # engine='fastparquet')
+# import matplotlib.pyplot as plt
 
-plt.plot(rec[0])
-plt.show()
+# plt.plot(rec[0])
+ #plt.show()

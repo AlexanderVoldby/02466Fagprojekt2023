@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 #load data from .MAT file
-mat = scipy.io.loadmat('data/nmrdata.mat')
+mat = scipy.io.loadmat('helpers/data/nmrdata.mat')
 
 #Get X and Labels. Probably different for the other dataset, but i didn't check :)
 mat = mat.get('nmrdata')
@@ -27,9 +27,4 @@ def inv_normalize_data(target, std):
     return target * std
 
 X = normalize_data(X)
-<<<<<<< HEAD
-print("Finished")
-=======
 
-trueFile = mat[0][0][2]
->>>>>>> 5c0a8e67523955c038beaa7e6c2927a5ea861aa9
