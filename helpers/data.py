@@ -7,7 +7,7 @@ mat = scipy.io.loadmat('helpers/data/nmrdata.mat')
 
 #Get X and Labels. Probably different for the other dataset, but i didn't check :)
 X = mat.get('nmrdata')[0][0][0]
-labels = mat.get('nmrdata')[0][0][0]
+labels = mat.get('nmrdata')[0][0][1]
 
 #Store mean and std for inversing the normalization
 mu_Y = np.mean(X)
