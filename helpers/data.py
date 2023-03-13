@@ -6,8 +6,9 @@ import matplotlib.pyplot as plt
 mat = scipy.io.loadmat('helpers/data/nmrdata.mat')
 
 #Get X and Labels. Probably different for the other dataset, but i didn't check :)
-X = mat.get('nmrdata')[0][0][0]
-labels = mat.get('nmrdata')[0][0][1]
+mat = mat.get('nmrdata')
+X = mat[0][0][0]
+labels = mat[0][0][1]
 
 #Store mean and std for inversing the normalization
 mu_Y = np.mean(X)
@@ -27,3 +28,4 @@ def inv_normalize_data(target, std):
 
 X = normalize_data(X)
 
+trueFile = mat[0][0][2]
