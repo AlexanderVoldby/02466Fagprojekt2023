@@ -5,10 +5,10 @@ import torch
 
 # Create artificial 3d dataset of 4 gaussian clusters
 m1 = [3., 3., 3.]
-m2 = [3., 5., 3.]
+m2 = [4., 7., 3.]
 m3 = [5., 3., 3.]
-m4 = [5., 5., 7.]
-sigma = 5
+m4 = [5., 5., 8.]
+sigma = 3
 cov = np.eye(3)*sigma
 
 X = np.array([np.random.multivariate_normal(m, cov, size=25) for m in [m1, m2, m3, m4]])
@@ -19,4 +19,4 @@ X = X.reshape((4*25, 3))
 
 nmf = torchNMF(X, 4)
 W, H = nmf.run(verbose=True)
-print(W.item())
+print(W)
