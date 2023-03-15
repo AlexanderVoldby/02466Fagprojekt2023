@@ -56,7 +56,7 @@ class torchNMF(torch.nn.Module):
 
         W, H = list(self.parameters())
 
-        W = self.softplus(W)
-        H = self.softplus(H)
+        W = self.softplus(W).detach().numpy()
+        H = self.softplus(H).detach().numpy()
 
         return W, H
