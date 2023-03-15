@@ -16,6 +16,7 @@ X = np.array([np.random.multivariate_normal(m, cov, size=25) for m in [m1, m2, m
 X = X.reshape((4*25, 3))
 
 # Run NMF, AA and min-volume NMF and plot
-print(X.shape)
-print(X[:10, :])
 
+nmf = torchNMF(X, 4)
+W, H = nmf.run(verbose=True)
+print(W.item())
