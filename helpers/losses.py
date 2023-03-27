@@ -17,5 +17,7 @@ class VolLoss(torch.nn.Module):
         self.loss = torch.linalg.det
         self.X = x
 
+        
+
     def forward(self, w, h, x):
-        return self.loss((w.T@w))+torch.linalg.matrix_norm(self.X - x, ord='fro')
+        return self.loss((w.T@w)) + torch.linalg.matrix_norm(self.X - x, ord='fro')
