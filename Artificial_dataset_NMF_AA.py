@@ -4,14 +4,10 @@ from NMF_vol_min import TorchNMF_MinVol
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
-
-# Sparseness function for investigating H
-
-
 # Create artificial 3d dataset of 4 gaussian clusters
 m1 = np.random.uniform(low=0.0, high=10, size=3) + 10
-m2 = np.random.uniform(low=0.0, high=10, size=3) + 10
-m3 = np.random.uniform(low=0.0, high=10, size=3) + 10
+m2 = np.random.uniform(low=0.0, high=10, size=3) + 15
+m3 = np.random.uniform(low=5.0, high=10, size=3) + 10
 sigma = 7
 cov = np.eye(3)*sigma
 clusters = np.array([np.random.multivariate_normal(m, cov, size=25) for m in [m1, m2, m3]])
@@ -21,7 +17,7 @@ mean = np.mean([m1, m2, m3], axis=0)
 mean_len = np.sqrt(sum([i**2 for i in mean]))
 # Run NMF, AA and min-volume NMF and plot
 
-nmf = torchNMF(X.T, 3)
+nmf = torchNMF(X.T, 3) # X.T because W is a basis for the columns of X
 W, H = nmf.run(verbose=True)
 print(W.shape, H.shape)
 

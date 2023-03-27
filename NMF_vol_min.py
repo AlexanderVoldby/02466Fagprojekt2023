@@ -15,7 +15,7 @@ class TorchNMF_MinVol(torch.nn.Module):
         n_row, n_col = X.shape
         self.X = torch.tensor(X)
 
-        self.softmax = torch.nn.Softmax(dim=1)
+        self.softmax = torch.nn.Softmax(dim=0)
         self.softplus = torch.nn.Softplus()
 
         # Initialization of Tensors/Matrices a and b with size NxR and RxM
@@ -32,10 +32,10 @@ class TorchNMF_MinVol(torch.nn.Module):
         return self.softmax(self.W), self.softplus(self.H), x
 
     def run(self, verbose=False):
-        optimizer = torch.optim.Adam(self.parameters(), lr=0.3)
+        optimizer = torch.optim.Adam(self.parameters(), lr=0.03)
 
         # early stopping
-        es = earlyStop(patience=10, offset=-0.00001)
+        es = earlyStop(patience=10, offset=-0.0001)
 
         running_loss = []
 
