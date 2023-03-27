@@ -20,4 +20,10 @@ class VolLoss(torch.nn.Module):
         
 
     def forward(self, w, h, x):
-        return self.loss((w.T@w)) + torch.linalg.matrix_norm(self.X - x, ord='fro')
+        return self.loss((w.T@w))+torch.linalg.matrix_norm(self.X - x, ord='fro')
+
+# Sparseness measure of the H-matrix
+def sparseness(h):
+    r, N = h.shape
+    nonzero = np.count_nonzero(h)
+    return 1 - nonzero/(r*N)
