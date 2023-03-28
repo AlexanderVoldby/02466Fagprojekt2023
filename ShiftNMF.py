@@ -25,8 +25,12 @@ class ShiftNMF(torch.nn.Module):
     def forward(self):
         # Implementation of NMF - F(A, B) = ||X - AB||^2
         # TODO: transform to freq. domain and write up the model to be passed to the frobenius norm
-        WH = torch.matmul(self.softplus(self.W), self.softplus(self.H))
-        return WH
+        Ht = torch.fft.fft(self.H)
+        fs = torch.tensor([[f/self.n_col for f in range(self.n_row)] for _ in range(self.n_col)])
+        Wt = self.W*torch.exp(-1j*2.*torch.pi*fs*self.tau)
+        # TODO: Softplus before or after Fourier transform?
+        WtHt = torch.matmul(self.softplus(self.Wt), self.softplus(self.Ht))
+        return WtHt
 
     def run(self, verbose=False):
         es = earlyStop(patience=5, offset=-0.1)
