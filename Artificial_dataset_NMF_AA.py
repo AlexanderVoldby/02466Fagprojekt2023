@@ -1,4 +1,4 @@
-from torchNMFtopy import torchNMF
+from torchNMF import torchNMF
 from NMF_vol_min import TorchNMF_MinVol
 # from torchAAtopy import torchAA
 import numpy as np
@@ -17,13 +17,15 @@ mean = np.mean([m1, m2, m3], axis=0)
 mean_len = np.sqrt(sum([i**2 for i in mean]))
 # Run NMF, AA and min-volume NMF and plot
 
-nmf = torchNMF(X.T, 3) # X.T because W is a basis for the columns of X
+nmf = torchNMF(X, 3) # X.T because W is a basis for the columns of X
 W, H = nmf.run(verbose=True)
 print(W.shape, H.shape)
+print(f"Volume of H: {np.linalg.det(H.T@H)}")
 
-nmf_min_vol = TorchNMF_MinVol(X.T, 3)
+nmf_min_vol = TorchNMF_MinVol(X, 3)
 W_mv, H_mv = nmf_min_vol.run(verbose=True)
 print(W_mv.shape, H_mv.shape)
+print(f"Volume of H_mv: {np.linalg.det(H_mv.T@H_mv)}")
 
 fig = plt.figure()
 ax = fig.add_subplot(projection='3d')
@@ -35,7 +37,7 @@ for cluster, color in zip(clusters, colors):
     zs = cluster[:, 2]
     ax.scatter(xs, ys, zs, color=color)
 
-for vec in W.T:
+for vec in H.T:
     x, y, z = vec
     ax.quiver(0, 0, 0, x, y, z)
     # Scale NMF basis with mean cluster length, otherwise the vectors are too short for visualization
@@ -53,7 +55,7 @@ for cluster, color in zip(clusters, colors):
     zs = cluster[:, 2]
     ax.scatter(xs, ys, zs, color=color)
 
-for vec in W_mv.T:
+for vec in H_mv.T:
     x, y, z = vec
     ax.quiver(0, 0, 0, x, y, z)
     # Scale NMF basis with mean cluster length, otherwise the vectors are too short for visualization

@@ -5,7 +5,7 @@ from helpers.callbacks import earlyStop
 from helpers.losses import frobeniusLoss
 
 
-class torchNMF(torch.nn.Module):
+class ShiftNMF(torch.nn.Module):
     def __init__(self, X, rank):
         super().__init__()
 
@@ -18,11 +18,13 @@ class torchNMF(torch.nn.Module):
         # Initialization of Tensors/Matrices a and b with size NxR and RxM
         self.W = torch.nn.Parameter(torch.rand(n_row, rank, requires_grad=True))
         self.H = torch.nn.Parameter(torch.rand(rank, n_col, requires_grad=True))
+        self.tau = torch.nn.Parameter(torch.rand(n_row, rank, requires_grad=True))
 
-        self.optim = torch.optim.Adam(self.parameters(), lr=0.03)
+        self.optim = torch.optim.Adam(self.parameters(), lr=0.3)
 
     def forward(self):
         # Implementation of NMF - F(A, B) = ||X - AB||^2
+        # TODO: transform to freq. domain and write up the model to be passed to the frobenius norm
         WH = torch.matmul(self.softplus(self.W), self.softplus(self.H))
         return WH
 

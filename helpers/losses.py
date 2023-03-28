@@ -5,22 +5,22 @@ import numpy as np
 class frobeniusLoss(torch.nn.Module):
     def __init__(self, x: torch.tensor):
         super(frobeniusLoss, self).__init__()
-        self.loss = torch.linalg.matrix_norm
         self.X = x
     
     def forward(self, input):
-        return self.loss(self.X - input, ord='fro')
+        return torch.linalg.matrix_norm(self.X - input, ord='fro')**2
     
 class VolLoss(torch.nn.Module):
-    def __init__(self, x: torch.tensor):
+    def __init__(self, x: torch.tensor, alpha=0.1):
         super(VolLoss, self).__init__()
-        self.loss = torch.linalg.det
         self.X = x
+        self.alpha = alpha
+
+        
 
     def forward(self, w, h, x):
-        #TODO: Square frobenius norm and add regularization
-        # We might have to change to constraining on H since it should denote the source.
-        return self.loss((w.T@w))+torch.linalg.matrix_norm(self.X - x, ord='fro')
+        # TODO: We might have to change to constraining on H since it should denote the source.
+        return torch.linalg.det(self.alpha*(h.T@h))+torch.linalg.matrix_norm(self.X - x, ord='fro')**2
 
 # Sparseness measure of the H-matrix
 def sparseness(h):

@@ -26,10 +26,10 @@ class TorchNMF_MinVol(torch.nn.Module):
 
     def forward(self):
         # Implementation of NMF - F(W, H) = ||X - WH||^2
-        self.WH = torch.matmul(self.softmax(self.W), self.softplus(self.H))
+        self.WH = torch.matmul(self.softplus(self.W), self.softmax(self.H))
         x = self.WH
 
-        return self.softmax(self.W), self.softplus(self.H), x
+        return self.softplus(self.W), self.softmax(self.H), x
 
     def run(self, verbose=False):
         optimizer = torch.optim.Adam(self.parameters(), lr=0.03)
@@ -63,7 +63,7 @@ class TorchNMF_MinVol(torch.nn.Module):
         if verbose:
             print(f"Final loss: {loss.item()}")
 
-        W = self.softmax(self.W)
-        H = self.softplus(self.H)
+        W = self.softplus(self.W)
+        H = self.softmax(self.H)
 
         return W.detach().numpy(), H.detach().numpy()
