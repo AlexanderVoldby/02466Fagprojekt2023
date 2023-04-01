@@ -10,26 +10,28 @@ class ShiftNMF(torch.nn.Module):
         super().__init__()
 
         # Shape of Matrix for reproduction
-        n_row, n_col = X.shape
+        self.rank = rank
+        self.n_row, self.n_col = X.shape
         self.X = torch.tensor(X)
         self.softplus = torch.nn.Softplus()
         self.lossfn = frobeniusLoss(self.X)
 
         # Initialization of Tensors/Matrices a and b with size NxR and RxM
-        self.W = torch.nn.Parameter(torch.rand(n_row, rank, requires_grad=True))
-        self.H = torch.nn.Parameter(torch.rand(rank, n_col, requires_grad=True))
-        self.tau = torch.nn.Parameter(torch.rand(n_row, rank, requires_grad=True))
+        self.W = torch.nn.Parameter(torch.rand(self.n_row, rank, requires_grad=True))
+        self.H = torch.nn.Parameter(torch.rand(rank, self.n_col, requires_grad=True))
+        self.tau = torch.nn.Parameter(torch.rand(self.n_row, rank, requires_grad=True))
 
         self.optim = torch.optim.Adam(self.parameters(), lr=0.3)
 
     def forward(self):
         # Implementation of NMF - F(A, B) = ||X - AB||^2
-        # TODO: transform to freq. domain and write up the model to be passed to the frobenius norm
-        Ht = torch.fft.fft(self.H)
-        fs = torch.tensor([[f/self.n_col for f in range(self.n_row)] for _ in range(self.n_col)])
-        Wt = self.W*torch.exp(-1j*2.*torch.pi*fs*self.tau)
-        # TODO: Softplus before or after Fourier transform?
-        WtHt = torch.matmul(self.softplus(self.Wt), self.softplus(self.Ht))
+        Ht = torch.fft.fft(self.softplus(self.H))
+        omega = torch.exp(torch.tensor(-1j*2.*torch.pi/self.n_row))
+        # TODO: This matrix should be created upon initialization not dynamically
+        shifts = torch.tensor([[torch.pow(omega, i*j) for i in range(self.rank)]
+                              for j in range(self.n_row)])*self.tau
+        Wt = self.softplus(self.W)*shifts
+        WtHt = torch.matmul(Wt, Ht)
         return WtHt
 
     def run(self, verbose=False):
@@ -43,8 +45,8 @@ class ShiftNMF(torch.nn.Module):
             output = self.forward()
 
             # backward
-
-            loss = self.lossfn.forward(output)
+            # TODO: Scale with 1/2M. M is n_col
+            loss = 1/(2*self.n_col)*self.lossfn.forward(output)
             loss.backward()
 
             # Update W and H
@@ -66,3 +68,8 @@ class ShiftNMF(torch.nn.Module):
         H = self.softplus(H).detach().numpy()
 
         return W, H
+
+
+if __name__ == "__main__":
+    nmf = ShiftNMF(X, 4)
+    W, H = nmf.run(verbose=True)
