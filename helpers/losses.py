@@ -9,6 +9,15 @@ class frobeniusLoss(torch.nn.Module):
     
     def forward(self, input):
         return torch.linalg.matrix_norm(self.X - input, ord='fro')**2
+
+
+class ShiftNMFLoss(torch.nn.Module):
+    def __init__(self, x: torch.tensor):
+        super().__init__()
+        self.X = torch.fft.fft(x)
+
+    def forward(self, input):
+        return torch.linalg.matrix_norm(self.X - input, ord='fro') ** 2
     
 class VolLoss(torch.nn.Module):
     def __init__(self, x: torch.tensor, alpha=0.1):
