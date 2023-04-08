@@ -27,7 +27,6 @@ class ShiftNMF(torch.nn.Module):
         # Implementation of NMF - F(A, B) = ||X - AB||^2
         Ht = torch.fft.fft(self.softplus(self.H))
         omega = torch.exp(torch.tensor(-1j*2.*torch.pi/self.n_row))
-        # TODO: This matrix should be created upon initialization not dynamically
         shifts = torch.tensor([[torch.pow(omega, i*j) for i in range(self.rank)]
                               for j in range(self.n_row)])*self.tau
         Wt = self.softplus(self.W)*shifts
@@ -45,7 +44,6 @@ class ShiftNMF(torch.nn.Module):
             output = self.forward()
 
             # backward
-            # TODO: Scale with 1/2M. M is n_col
             loss = 1/(2*self.n_col)*self.lossfn.forward(output)
             loss.backward()
 
@@ -62,14 +60,14 @@ class ShiftNMF(torch.nn.Module):
         if verbose:
             print(f"Final loss: {running_loss[-1]}")
 
-        W, H = list(self.parameters())
+        W, H, tau = list(self.parameters())
 
         W = self.softplus(W).detach().numpy()
         H = self.softplus(H).detach().numpy()
 
-        return W, H
+        return W, H, tau
 
 
 if __name__ == "__main__":
     nmf = ShiftNMF(X, 4)
-    W, H = nmf.run(verbose=True)
+    W, H, tau = nmf.run(verbose=True)
