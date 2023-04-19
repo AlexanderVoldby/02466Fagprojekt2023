@@ -9,7 +9,6 @@ class torchNMF(torch.nn.Module):
     def __init__(self, X, rank):
         super().__init__()
 
-        # Shape of Matrix for reproduction
         n_row, n_col = X.shape
         self.X = torch.tensor(X)
         self.softplus = torch.nn.Softplus()
@@ -26,7 +25,7 @@ class torchNMF(torch.nn.Module):
         WH = torch.matmul(self.softplus(self.W), self.softplus(self.H))
         return WH
 
-    def run(self, verbose=False):
+    def fit(self, verbose=False):
         es = earlyStop(patience=5, offset=-0.1)
         running_loss = []
         while not es.trigger():

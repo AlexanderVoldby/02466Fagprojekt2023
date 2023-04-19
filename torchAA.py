@@ -19,7 +19,7 @@ class torchAA(torch.nn.Module):
 
         # softmax layer
         self.softmax = torch.nn.Softmax(dim=1)
-
+        self.lossfn = frobeniusLoss(X)
         # Initialization of Tensors/Matrices S and C with size Col x Rank and Rank x Col
         # NxM (X) * MxD (C) = NxD (XC)
         # NxD (XC) * DxM (S) = NxM (XCS)
@@ -44,60 +44,45 @@ class torchAA(torch.nn.Module):
 
         return x
 
+    def fit(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr=0.3)
 
-aa = torchAA(X, 3)
+        # early stopping
+        es = earlyStop(patience=5, offset=-0.1)
 
-# optimizer for modifying learning rate, ADAM chosen because of https://machinelearningmastery.com/adam-optimization-algorithm-for-deep-learning/
-optimizer = torch.optim.Adam(aa.parameters(), lr=0.3)
+        running_loss = []
 
-# early stopping
-es = earlyStop(patience=5, offset=-0.1)
+        while (not es.trigger()):
+            # zero optimizer gradient
+            optimizer.zero_grad()
 
-running_loss = []
+            # forward
+            output = self.forward()
 
-while (not es.trigger()):
-    # zero optimizer gradient
-    optimizer.zero_grad()
+            # backward
+            loss = self.lossfn.forward(output)
+            loss.backward()
 
-    # forward
-    output = aa()
+            # Update A and B
+            optimizer.step()
 
-    # backward
-    loss = frobeniusLoss()
-    loss = loss.forward(output)
-    loss.backward()
+            # append loss for graphing
+            running_loss.append(loss.item())
 
-    # Update A and B
-    optimizer.step()
+            # count with early stopping
+            es.count(loss.item())
 
-    # append loss for graphing
-    running_loss.append(loss.item())
+            # print loss
+            print(f"epoch: {len(running_loss)}, Loss: {loss.item()}", end='\r')
 
-    # count with early stopping
-    es.count(loss.item())
+        # print(list(aa.parameters())[1].shape)
 
-    # print loss
-    print(f"epoch: {len(running_loss)}, Loss: {loss.item()}", end='\r')
+        C, S = list(self.parameters())
 
-plt.plot(running_loss)
-plt.show()
-# print(list(aa.parameters())[1].shape)
+        C = self.softmax(C)
+        S = self.softmax(S)
 
-C, S = list(aa.parameters())
+        C = C.detach().numpy()
+        S = S.detach().numpy()
 
-C = aa.softmax(C)
-S = aa.softmax(S)
-
-C = C.detach().numpy()
-S = S.detach().numpy()
-
-rec = np.dot(np.dot(X, C),
-             S)
-
-rec = rec.T
-
-rec_frame = pd.DataFrame(rec)
-rec_frame.columns = rec_frame.columns.astype(str)
-
-rec_frame.to_parquet("recons_x.parquet",
-                     engine='fastparquet')
+        return C, S
