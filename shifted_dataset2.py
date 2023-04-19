@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import torch
 from ShiftNMF import ShiftNMF
-
+np.random.seed(42069)
 # Define random sources, mixings and shifts; H, W and tau
 N, M, d = 10, 10000, 3
 Fs = 1000  # The sampling frequency we use for the simulation
