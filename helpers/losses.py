@@ -14,10 +14,18 @@ class frobeniusLoss(torch.nn.Module):
 class ShiftNMFLoss(torch.nn.Module):
     def __init__(self, x: torch.tensor):
         super().__init__()
+        self.N, self.M = x.shape
         self.X = torch.fft.fft(x)
 
     def forward(self, input):
-        return torch.linalg.matrix_norm(self.X - input, ord='fro') ** 2
+        # TODO: Probably each of these loss functions work fine (the outcommented code runs as well)
+        # TODO: Find which has the best performance
+        # loss = 0
+        # for f in range(self.M):
+            #loss += torch.matmul(torch.conj(self.X[:, f] - input[:, f]), self.X[:, f] - input[:, f])
+
+        loss = 1/(2*self.M) * torch.linalg.matrix_norm(self.X - input, ord='fro')
+        return loss.real
     
 class VolLoss(torch.nn.Module):
     def __init__(self, x: torch.tensor, alpha=0.1):

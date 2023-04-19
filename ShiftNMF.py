@@ -2,7 +2,10 @@ import torch
 
 from helpers.data import X
 from helpers.callbacks import earlyStop
-from helpers.losses import frobeniusLoss
+from helpers.losses import ShiftNMFLoss
+
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+print(device)
 
 
 class ShiftNMF(torch.nn.Module):
@@ -11,29 +14,32 @@ class ShiftNMF(torch.nn.Module):
 
         # Shape of Matrix for reproduction
         self.rank = rank
-        self.n_row, self.n_col = X.shape
+        self.N, self.M = X.shape
         self.X = torch.tensor(X)
         self.softplus = torch.nn.Softplus()
-        self.lossfn = frobeniusLoss(self.X)
+        self.lossfn = ShiftNMFLoss(self.X)
 
         # Initialization of Tensors/Matrices a and b with size NxR and RxM
-        self.W = torch.nn.Parameter(torch.rand(self.n_row, rank, requires_grad=True))
-        self.H = torch.nn.Parameter(torch.rand(rank, self.n_col, requires_grad=True))
-        self.tau = torch.nn.Parameter(torch.rand(self.n_row, rank, requires_grad=True))
+        self.W = torch.nn.Parameter(torch.rand(self.N, rank, requires_grad=True))
+        self.H = torch.nn.Parameter(torch.rand(rank, self.M, requires_grad=True))
+        self.tau = torch.nn.Parameter(torch.rand(self.N, rank, requires_grad=True))
 
         self.optim = torch.optim.Adam(self.parameters(), lr=0.3)
 
     def forward(self):
-        # Implementation of NMF - F(A, B) = ||X - AB||^2
-        Ht = torch.fft.fft(self.softplus(self.H))
-        omega = torch.exp(torch.tensor(-1j*2.*torch.pi/self.n_row))
-        shifts = torch.tensor([[torch.pow(omega, i*j) for i in range(self.rank)]
-                              for j in range(self.n_row)])*self.tau
-        Wt = self.softplus(self.W)*shifts
-        WtHt = torch.matmul(Wt, Ht)
-        return WtHt
+        # The underlying signals in the frequency space
+        Hf = torch.fft.fft(self.softplus(self.H))
+        # The matrix that approximates the observations
+        WHt = torch.empty((self.N, self.M), dtype=torch.cfloat)
 
-    def run(self, verbose=False):
+        for f in range(self.M):
+            omega = torch.ones((self.N, self.rank)) * 2 * torch.pi * f / self.M
+            exp_tau = torch.exp(-1j * omega * self.tau)
+            Wf = self.softplus(self.W) * exp_tau
+            WHt[:, f] = torch.matmul(Wf, Hf[:, f])
+        return WHt
+
+    def fit(self, verbose=False):
         es = earlyStop(patience=5, offset=-0.1)
         running_loss = []
         while not es.trigger():
@@ -41,24 +47,24 @@ class ShiftNMF(torch.nn.Module):
             self.optim.zero_grad()
 
             # forward
+            print("Forward pass...")
             output = self.forward()
 
             # backward
-            loss = 1/(2*self.n_col)*self.lossfn.forward(output)
+            loss = self.lossfn(output)
+            print("Backward pass...")
             loss.backward()
 
-            # Update W and H
+            # Update W, H and tau
+            print("Updating W, H, and tau")
+            print()
             self.optim.step()
 
             running_loss.append(loss.item())
             es.count(loss.item())
 
             # print loss
-            if verbose and len(running_loss) % 50 == 0:
-                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}")
-
-        if verbose:
-            print(f"Final loss: {running_loss[-1]}")
+            print(f"epoch: {len(running_loss)}, Loss: {loss.item()}")
 
         W, H, tau = list(self.parameters())
 
@@ -70,4 +76,5 @@ class ShiftNMF(torch.nn.Module):
 
 if __name__ == "__main__":
     nmf = ShiftNMF(X, 4)
-    W, H, tau = nmf.run(verbose=True)
+    nmf.to(device)
+    W, H, tau = nmf.fit(verbose=True)
