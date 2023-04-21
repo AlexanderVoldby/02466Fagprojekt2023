@@ -22,22 +22,17 @@ class ShiftNMF(torch.nn.Module):
         # Initialization of Tensors/Matrices a and b with size NxR and RxM
         self.W = torch.nn.Parameter(torch.rand(self.N, rank, requires_grad=True))
         self.H = torch.nn.Parameter(torch.rand(rank, self.M, requires_grad=True))
+        # TODO: Constrain tau by using tanh and multiplying with a max/min value
         self.tau = torch.nn.Parameter(torch.rand(self.N, rank, requires_grad=True))
-
-        self.optim = torch.optim.Adam(self.parameters(), lr=0.3)
+        self.optim = torch.optim.Adam(self.parameters(), lr=0.1)
 
     def forward(self):
-        # The underlying signals in the frequency space
-        Hf = torch.fft.fft(self.softplus(self.H))
-        # The matrix that approximates the observations
-        WHt = torch.empty((self.N, self.M), dtype=torch.cfloat)
-
-        for f in range(self.M):
-            omega = torch.ones((self.N, self.rank)) * 2 * torch.pi * f / self.M
-            exp_tau = torch.exp(-1j * omega * self.tau)
-            Wf = self.softplus(self.W) * exp_tau
-            WHt[:, f] = torch.matmul(Wf, Hf[:, f])
-        return WHt
+        Hf = torch.fft.fft(self.softplus(self.H)) # DFT on H
+        f = torch.arange(0, self.M) / self.M # The frequencies
+        omega = torch.exp(-1j*2*torch.pi*torch.einsum('ab,c->abc', self.tau, f)) # The shift operator
+        Wf = torch.einsum('ab,abc->abc', self.softplus(self.W), omega) # Multiply shift operator into W
+        V = torch.einsum('abc,bc->ac', Wf, Hf) # Multiply Wf and Hf
+        return V
 
     def fit(self, verbose=False):
         es = earlyStop(patience=5, offset=-0.1)
@@ -47,16 +42,13 @@ class ShiftNMF(torch.nn.Module):
             self.optim.zero_grad()
 
             # forward
-            print("Forward pass...")
             output = self.forward()
 
             # backward
             loss = self.lossfn(output)
-            print("Backward pass...")
             loss.backward()
 
             # Update W, H and tau
-            print("Updating W, H, and tau")
             print()
             self.optim.step()
 
@@ -64,7 +56,8 @@ class ShiftNMF(torch.nn.Module):
             es.count(loss.item())
 
             # print loss
-            print(f"epoch: {len(running_loss)}, Loss: {loss.item()}")
+            if verbose:
+                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}")
 
         W, H, tau = list(self.parameters())
 

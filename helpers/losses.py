@@ -18,12 +18,7 @@ class ShiftNMFLoss(torch.nn.Module):
         self.X = torch.fft.fft(x)
 
     def forward(self, input):
-        # TODO: Probably each of these loss functions work fine (the outcommented code runs as well)
-        # TODO: Find which has the best performance
-        # loss = 0
-        # for f in range(self.M):
-            #loss += torch.matmul(torch.conj(self.X[:, f] - input[:, f]), self.X[:, f] - input[:, f])
-
+        #TODO: Add regularization with the determinant of the W matrix
         loss = 1/(2*self.M) * torch.linalg.matrix_norm(self.X - input, ord='fro')
         return loss.real
     
