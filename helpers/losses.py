@@ -16,7 +16,7 @@ class ShiftNMFLoss(torch.nn.Module):
         super().__init__()
         self.N, self.M = x.shape
         self.X = torch.fft.fft(x)
-
+        # TODO: Definer over (f-1)/2 frekvenser
     def forward(self, input):
         #TODO: Add regularization with the determinant of the W matrix
         loss = 1/(2*self.M) * torch.linalg.matrix_norm(self.X - input, ord='fro')
