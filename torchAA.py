@@ -1,12 +1,7 @@
 import torch
-import numpy as np
-import pandas as pd
 
-from helpers.data import X
 from helpers.callbacks import earlyStop
 from helpers.losses import frobeniusLoss
-
-import matplotlib.pyplot as plt
 
 
 class torchAA(torch.nn.Module):
@@ -19,7 +14,7 @@ class torchAA(torch.nn.Module):
 
         # softmax layer
         self.softmax = torch.nn.Softmax(dim=1)
-        self.lossfn = frobeniusLoss(X)
+        self.lossfn = frobeniusLoss(self.X)
         # Initialization of Tensors/Matrices S and C with size Col x Rank and Rank x Col
         # NxM (X) * MxD (C) = NxD (XC)
         # NxD (XC) * DxM (S) = NxM (XCS)
@@ -44,7 +39,7 @@ class torchAA(torch.nn.Module):
 
         return x
 
-    def fit(self):
+    def fit(self, verbose=False):
         optimizer = torch.optim.Adam(self.parameters(), lr=0.3)
 
         # early stopping
@@ -73,9 +68,8 @@ class torchAA(torch.nn.Module):
             es.count(loss.item())
 
             # print loss
-            print(f"epoch: {len(running_loss)}, Loss: {loss.item()}", end='\r')
-
-        # print(list(aa.parameters())[1].shape)
+            if verbose:
+                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}", end='\r')
 
         C, S = list(self.parameters())
 

@@ -47,11 +47,12 @@ plt.plot(H[0])
 plt.title("Initial signal")
 plt.show()
 
-shift = 200
+shift = 200.435
 shifted_signal = np.fft.fft(H[0])*np.exp(-2j*np.pi*np.arange(0, M)/M*shift)
 plt.figure()
 plt.plot(np.fft.ifft(shifted_signal), label="Shifted")
 plt.plot(H[0], label="Original signal")
+plt.legend()
 plt.title("Signal after applying shift of 20")
 plt.show()
 

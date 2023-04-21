@@ -3,6 +3,7 @@ import torch
 from helpers.data import X
 from helpers.callbacks import earlyStop
 from helpers.losses import ShiftNMFLoss
+import matplotlib.pyplot as plt
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
@@ -20,8 +21,11 @@ class ShiftNMF(torch.nn.Module):
         self.lossfn = ShiftNMFLoss(self.X)
 
         # Initialization of Tensors/Matrices a and b with size NxR and RxM
+        # Introduce regularization on W with min volume by making W have unit norm by dividing through
+        # with the norm of W
         self.W = torch.nn.Parameter(torch.rand(self.N, rank, requires_grad=True))
         self.H = torch.nn.Parameter(torch.rand(rank, self.M, requires_grad=True))
+        # TODO: Transform tau through tanh times the max value we want to see for tau
         self.tau = torch.nn.Parameter(torch.rand(self.N, rank, requires_grad=True))
 
         self.optim = torch.optim.Adam(self.parameters(), lr=0.3)
@@ -30,15 +34,13 @@ class ShiftNMF(torch.nn.Module):
         # The underlying signals in the frequency space
         Hf = torch.fft.fft(self.softplus(self.H))
         # The matrix that approximates the observations
-        WHt = torch.empty((self.N, self.M), dtype=torch.cfloat)
-
-        for f in range(self.M):
-            omega = torch.ones((self.N, self.rank)) * 2 * torch.pi * f / self.M
-            exp_tau = torch.exp(-1j * omega * self.tau)
-            Wf = self.softplus(self.W) * exp_tau
-            WHt[:, f] = torch.matmul(Wf, Hf[:, f])
-        return WHt
-
+        # Needs to be N x d x M
+        f = torch.arange(0, self.M) / self.M
+        omega = torch.exp(-1j*2 * torch.pi*torch.einsum('ab,c->abc', self.tau, f))
+        Wf = torch.einsum('ab,abc->abc', self.softplus(self.W), omega)
+        # Broadcast Wf and H together
+        V = torch.einsum('abc,bc->ac', Wf, Hf)
+        return V
     def fit(self, verbose=False):
         es = earlyStop(patience=5, offset=-0.1)
         running_loss = []
@@ -58,6 +60,7 @@ class ShiftNMF(torch.nn.Module):
             # Update W, H and tau
             print("Updating W, H, and tau")
             print()
+            # TODO: Or instead constrain tau to make shifts within +/- 1000 when we take the step
             self.optim.step()
 
             running_loss.append(loss.item())
@@ -78,3 +81,12 @@ if __name__ == "__main__":
     nmf = ShiftNMF(X, 4)
     nmf.to(device)
     W, H, tau = nmf.fit(verbose=True)
+
+plt.figure()
+for signal in H:
+    plt.plot(signal)
+plt.show()
+
+plt.figure()
+plt.imshow(W)
+plt.show()

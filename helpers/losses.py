@@ -16,7 +16,7 @@ class ShiftNMFLoss(torch.nn.Module):
         super().__init__()
         self.N, self.M = x.shape
         self.X = torch.fft.fft(x)
-
+        # TODO: Definer over (f-1)/2 frekvenser
     def forward(self, input):
         # TODO: Probably each of these loss functions work fine (the outcommented code runs as well)
         # TODO: Find which has the best performance
