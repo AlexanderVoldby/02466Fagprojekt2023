@@ -3,6 +3,7 @@ import torch
 from helpers.data import X
 from helpers.callbacks import earlyStop
 from helpers.losses import ShiftNMFLoss
+import matplotlib.pyplot as plt
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
@@ -20,6 +21,8 @@ class ShiftNMF(torch.nn.Module):
         self.lossfn = ShiftNMFLoss(self.X)
 
         # Initialization of Tensors/Matrices a and b with size NxR and RxM
+        # Introduce regularization on W with min volume by making W have unit norm by dividing through
+        # with the norm of W
         self.W = torch.nn.Parameter(torch.rand(self.N, rank, requires_grad=True))
         self.H = torch.nn.Parameter(torch.rand(rank, self.M, requires_grad=True))
         # TODO: Constrain tau by using tanh and multiplying with a max/min value
@@ -50,6 +53,7 @@ class ShiftNMF(torch.nn.Module):
 
             # Update W, H and tau
             print()
+            # TODO: Or instead constrain tau to make shifts within +/- 1000 when we take the step
             self.optim.step()
 
             running_loss.append(loss.item())
@@ -71,3 +75,12 @@ if __name__ == "__main__":
     nmf = ShiftNMF(X, 4)
     nmf.to(device)
     W, H, tau = nmf.fit(verbose=True)
+
+plt.figure()
+for signal in H:
+    plt.plot(signal)
+plt.show()
+
+plt.figure()
+plt.imshow(W)
+plt.show()
