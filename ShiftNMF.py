@@ -37,10 +37,10 @@ class ShiftNMF(torch.nn.Module):
         # The matrix that approximates the observations
         # Needs to be N x d x M
         f = torch.arange(0, self.M) / self.M
-        omega = torch.exp(-1j*2 * torch.pi*torch.einsum('ab,c->abc', self.tau, f))
-        Wf = torch.einsum('ab,abc->abc', self.softplus(self.W), omega)
+        omega = torch.exp(-1j*2 * torch.pi*torch.einsum('Nd,M->NdM', self.tau, f))
+        Wf = torch.einsum('Nd,NdM->NdM', self.softplus(self.W), omega)
         # Broadcast Wf and H together
-        V = torch.einsum('abc,bc->ac', Wf, Hf)
+        V = torch.einsum('NdM,dM->NM', Wf, Hf)
         return V
     def fit(self, verbose=False):
         es = earlyStop(patience=5, offset=-0.01)
