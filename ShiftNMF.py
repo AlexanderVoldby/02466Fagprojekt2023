@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
-
 class ShiftNMF(torch.nn.Module):
     def __init__(self, X, rank):
         super().__init__()
@@ -26,7 +25,8 @@ class ShiftNMF(torch.nn.Module):
         self.W = torch.nn.Parameter(torch.rand(self.N, rank, requires_grad=True))
         self.H = torch.nn.Parameter(torch.rand(rank, self.M, requires_grad=True))
         # TODO: Constrain tau by using tanh and multiplying with a max/min value
-        self.tau = torch.nn.Parameter(torch.tanh(torch.rand(self.N, self.rank) * 2000 - 1000), requires_grad=True)
+        # self.tau = torch.nn.Parameter(torch.tanh(torch.rand(self.N, self.rank) * 2000 - 1000), requires_grad=True)
+        self.tau = torch.nn.Parameter(torch.rand(self.N, self.rank)-0.5, requires_grad=True)
         self.optim = torch.optim.Adam(self.parameters(), lr=0.1)
 
     def forward(self):
@@ -41,7 +41,7 @@ class ShiftNMF(torch.nn.Module):
         V = torch.einsum('abc,bc->ac', Wf, Hf)
         return V
     def fit(self, verbose=False):
-        es = earlyStop(patience=5, offset=-0.1)
+        es = earlyStop(patience=5, offset=-0.01)
         running_loss = []
         while not es.trigger():
             # zero optimizer gradient
@@ -70,27 +70,43 @@ class ShiftNMF(torch.nn.Module):
 
         W = self.softplus(W).detach().numpy()
         H = self.softplus(H).detach().numpy()
-        tau = tau.detach().numpy()
+        tau = torch.tanh(tau.detach()).numpy() * 5
+        # tau = tau.detach().numpy()
 
         return W, H, tau
 
 
 if __name__ == "__main__":
-    nmf = ShiftNMF(X, 4)
+    nmf = ShiftNMF(X, 2)
     nmf.to(device)
     W, H, tau = nmf.fit(verbose=True)
 
-plt.figure()
-for signal in H:
-    plt.plot(signal)
-plt.title("H - the latent variables")
-plt.show()
+# plt.figure()
+# for signal in H:
+#     plt.plot(signal)
+# plt.title("H - the latent variables")
+# plt.show()
+
 
 plt.figure()
-plt.imshow(W)
-plt.colorbar()
-plt.title("W - The mixings")
+for signal in X:
+    plt.plot(signal)
+# plt.show()
+
+
+# import numpy as np
+X_rec = W @ H
+plt.figure()
+for signal in X_rec:
+    plt.plot(signal)
 plt.show()
+
+
+# plt.figure()
+# plt.imshow(W)
+# plt.colorbar()
+# plt.title("W - The mixings")
+# plt.show()
 
 plt.figure()
 plt.imshow(tau)

@@ -3,3 +3,4 @@
 /__pychache__
 *.m
 *.parquet
+*.pyc
