@@ -13,6 +13,8 @@ targets = mat.get('yData')
 target_labels = mat.get('yLabels')
 axis = mat.get("Axis")
 
+print(targets)
+
 plt.figure()
 plt.plot(X[[np.all(x == [35, 35, 30]) for x in targets]][0])
 plt.xlabel("Chemical shift [ppm]")
