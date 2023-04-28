@@ -83,35 +83,21 @@ if __name__ == "__main__":
     nmf.to(device)
     W, H, tau = nmf.fit(verbose=True)
 
-# plt.figure()
-# for signal in H:
-#     plt.plot(signal)
-# plt.title("H - the latent variables")
-# plt.show()
+    # plt.figure()
+    # for signal in H:
+    #     plt.plot(signal)
+    # plt.title("H - the latent variables")
+    # plt.show()
 
 
-plt.figure()
-for signal in X_clean:
-    plt.plot(signal)
-# plt.show()
+    # plt.figure()
+    # plt.imshow(W)
+    # plt.colorbar()
+    # plt.title("W - The mixings")
+    # plt.show()
 
-
-# import numpy as np
-X_rec = W @ H
-plt.figure()
-for signal in X_rec:
-    plt.plot(signal)
-plt.show()
-
-
-# plt.figure()
-# plt.imshow(W)
-# plt.colorbar()
-# plt.title("W - The mixings")
-# plt.show()
-
-plt.figure()
-plt.imshow(tau)
-plt.colorbar()
-plt.title("Tau")
-plt.show()
+    plt.figure()
+    plt.imshow(tau)
+    plt.colorbar()
+    plt.title("Tau")
+    plt.show()
