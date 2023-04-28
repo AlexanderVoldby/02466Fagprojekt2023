@@ -13,35 +13,38 @@ class torchAA(torch.nn.Module):
         self.X = torch.tensor(X)
 
         # softmax layer
-        self.softmax = torch.nn.Softmax(dim=0)
+        self.softmax = torch.nn.Softmax(dim=1)
         self.lossfn = frobeniusLoss(self.X)
         # Initialization of Tensors/Matrices S and C with size Col x Rank and Rank x Col
-        # DxN (C) * NxM (X) =  DxM (CX)
-        # NxD (S) *  DxM (CX) = NxM (SCX)    
+        # NxM (X) * MxD (C) = NxD (XC)
+        # NxD (XC) * DxM (S) = NxM (XCS)    
         
-        self.C_tilde = torch.nn.Parameter(torch.rand(rank, n_row, requires_grad=True))
-        self.S_tilde = torch.nn.Parameter(torch.rand(n_row, rank, requires_grad=True))
-        self.C = lambda:self.softmax(self.C_tilde)
-        self.S = lambda:self.softmax(self.S_tilde)
+        self.C = torch.nn.Parameter(torch.rand(n_col, rank, requires_grad=True))
+        self.S = torch.nn.Parameter(torch.rand(rank, n_col, requires_grad=True))
+
 
     def forward(self):
         # Implementation of AA - F(C, S) = ||X - XCS||^2
 
         # first matrix Multiplication with softmax
-        self.CX = torch.matmul(self.C().double(), self.X.double())
+        self.XC = torch.matmul(self.X.double(),
+                               self.softmax(
+                                   self.C.double()))
 
         # Second matrix multiplication with softmax
-        self.SCX = torch.matmul(self.S().double(),self.CX.double())
+        self.XCS = torch.matmul(self.XC.double(),
+                                self.softmax(
+                                    self.S.double()))
 
-        x = self.X - self.SCX
+        x = self.X - self.XCS
 
         return x
 
     def fit(self, verbose=False):
-        optimizer = torch.optim.Adam(self.parameters(), lr=0.4)
+        optimizer = torch.optim.Adam(self.parameters(), lr=0.3)
 
         # early stopping
-        es = earlyStop(patience=5, offset=-0.001)
+        es = earlyStop(patience=5, offset=-0.3)
 
         running_loss = []
 
@@ -82,6 +85,7 @@ class torchAA(torch.nn.Module):
 
 
 if __name__ == "__main__":
+    print("hello")
     import numpy as np
     import matplotlib.pyplot as plt
     import scipy.io
@@ -90,22 +94,15 @@ if __name__ == "__main__":
     #Get X and Labels. Probably different for the other dataset, but i didn't check :)
     X = mat.get('xData')
 
-    
-    
+    plt.plot(X[1])
     AA = torchAA(X, 3)
     C,S = AA.fit(verbose=True)
-    CX = np.matmul(C, X)
-    SCX = np.matmul(S,CX)
-    print()
-    plt.plot(CX[0])
-    plt.plot(CX[1])
-    plt.plot(CX[2])
-    plt.show()
-    plt.plot(X[1])
-    plt.plot(SCX[1])
-    plt.show()
+    XC = np.matmul(X,C)
 
-    plt.plot(X[2])
-    plt.plot(SCX[2])
+    # Second matrix multiplication with softmax
+    XCS = np.matmul(C,S)
+
+    plt.plot(XCS[1])
     plt.show()
+    
     
