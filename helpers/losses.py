@@ -28,14 +28,24 @@ class VolLoss(torch.nn.Module):
         self.X = x
         self.alpha = alpha
 
-        
 
     def forward(self, w, h, x):
         # TODO: We might have to change to constraining on H since it should denote the source.
         return torch.linalg.det(self.alpha*(h.T@h))+torch.linalg.matrix_norm(self.X - x, ord='fro')**2
 
 # Sparseness measure of the H-matrix
-def sparseness(h):
-    r, N = h.shape
-    nonzero = np.count_nonzero(h)
-    return 1 - nonzero/(r*N)
+
+class MVR_ShiftNMF_Loss(torch.nn.Module):
+    def __init__(self, x: torch.tensor, lamb=0.01):
+        super().__init__()
+        self.N, self.M = x.shape
+        self.Xf = torch.fft.fft(x)
+        self.lamb = lamb
+        self.eps = 1e-6
+
+    def forward(self, inp, H): # Loss function must take the reconstruction and W.
+        loss = 1 / (2 * self.M) * torch.linalg.matrix_norm(self.Xf - inp, ord='fro')
+        vol_H = torch.det(torch.matmul(H, H.T) + self.eps)
+        reg = self.lamb * vol_H
+        print(f"Loss: {loss}, Regularization: {reg}")
+        return loss + reg
