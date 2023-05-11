@@ -28,19 +28,19 @@ class ShiftNMF(torch.nn.Module):
         self.W = torch.nn.Parameter(torch.rand(self.N, rank, requires_grad=True))
         self.H = torch.nn.Parameter(torch.rand(rank, self.M, requires_grad=True))
         # TODO: Constrain tau by using tanh and multiplying with a max/min value
-        self.tau = torch.nn.Parameter(torch.tanh(torch.rand(self.N, self.rank) * 2000 - 1000), requires_grad=True)
+        self.tau = torch.nn.Parameter(torch.rand(self.N, self.rank), requires_grad=True)
         self.optim = torch.optim.Adam(self.parameters(), lr=0.1)
 
     def forward(self):
         Hf = torch.fft.fft(self.softplus(self.H)) # DFT on H
         f = torch.arange(0, self.M) / self.M # The frequencies
         omega = torch.exp(-1j*2*torch.pi*torch.einsum('ab,c->abc', self.tau, f)) # The shift operator
-        Wf = torch.einsum('ab,abc->abc', self.softmax(self.W, dim=1), omega) # Multiply shift operator into W
+        Wf = torch.einsum('ab,abc->abc', self.softmax(self.W, dim=0), omega) # Multiply shift operator into W
         V = torch.einsum('abc,bc->ac', Wf, Hf) # Multiply Wf and Hf
         return V
 
     def fit(self, verbose=False):
-        es = earlyStop(patience=5, offset=-0.1)
+        es = earlyStop(patience=5, offset=-0.001)
         running_loss = []
         while not es.trigger():
             # zero optimizer gradient
@@ -50,7 +50,7 @@ class ShiftNMF(torch.nn.Module):
             output = self.forward()
 
             # backward
-            loss = self.lossfn(output, self.softplus(self.H))
+            loss = self.lossfn(output, self.softmax(self.W, dim=0))
             loss.backward()
 
             # Update W, H and tau
@@ -65,8 +65,8 @@ class ShiftNMF(torch.nn.Module):
 
         W, H, tau = list(self.parameters())
 
-        W = self.softmax(W, dim=1).detach().numpy()
-        H = self.softplus(H).detach().numpy()
+        W = self.softmax(self.W, dim=0).detach().numpy()
+        H = self.softplus(self.H).detach().numpy()
         tau = tau.detach().numpy()
 
         return W, H, tau
@@ -74,7 +74,6 @@ class ShiftNMF(torch.nn.Module):
 
 if __name__ == "__main__":
     nmf = ShiftNMF(X, 4)
-    nmf.to(device)
     W, H, tau = nmf.fit(verbose=True)
 
     plt.figure()

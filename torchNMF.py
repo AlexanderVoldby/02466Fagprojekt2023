@@ -5,7 +5,7 @@ from helpers.callbacks import earlyStop
 from helpers.losses import frobeniusLoss
 
 
-class torchNMF(torch.nn.Module):
+class NMF(torch.nn.Module):
     def __init__(self, X, rank):
         super().__init__()
 
@@ -18,10 +18,9 @@ class torchNMF(torch.nn.Module):
         self.W = torch.nn.Parameter(torch.rand(n_row, rank, requires_grad=True))
         self.H = torch.nn.Parameter(torch.rand(rank, n_col, requires_grad=True))
 
-        self.optim = torch.optim.Adam(self.parameters(), lr=0.03)
+        self.optim = torch.optim.Adam(self.parameters(), lr=0.3)
 
     def forward(self):
-        # Implementation of NMF - F(A, B) = ||X - AB||^2
         WH = torch.matmul(self.softplus(self.W), self.softplus(self.H))
         return WH
 
@@ -49,9 +48,6 @@ class torchNMF(torch.nn.Module):
             # print loss
             if verbose and len(running_loss) % 50 == 0:
                 print(f"epoch: {len(running_loss)}, Loss: {loss.item()}")
-
-        if verbose:
-            print(f"Final loss: {running_loss[-1]}")
 
         W, H = list(self.parameters())
 

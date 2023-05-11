@@ -28,17 +28,15 @@ class torchAA(torch.nn.Module):
         # Implementation of AA - F(C, S) = ||X - XCS||^2
 
         # first matrix Multiplication with softmax
-        self.CX = torch.matmul(self.C().double(), self.X.double())
+        CX = torch.matmul(self.C().double(), self.X.double())
 
         # Second matrix multiplication with softmax
-        self.SCX = torch.matmul(self.S().double(),self.CX.double())
+        SCX = torch.matmul(self.S().double(), CX.double())
 
-        x = self.X - self.SCX
-
-        return x
+        return SCX
 
     def fit(self, verbose=False):
-        optimizer = torch.optim.Adam(self.parameters(), lr=0.4)
+        optimizer = torch.optim.Adam(self.parameters(), lr=0.3)
 
         # early stopping
         es = earlyStop(patience=5, offset=-0.001)
@@ -66,7 +64,7 @@ class torchAA(torch.nn.Module):
             es.count(loss.item())
 
             # print loss
-            if verbose:
+            if verbose and len(running_loss) % 50 == 0:
                 print(f"epoch: {len(running_loss)}, Loss: {loss.item()}", end='\r')
 
         C, S = list(self.parameters())
@@ -89,20 +87,20 @@ if __name__ == "__main__":
 
     #Get X and Labels. Probably different for the other dataset, but i didn't check :)
     X = mat.get('xData')
-
-    
     
     AA = torchAA(X, 3)
-    C,S = AA.fit(verbose=True)
+    C, S = AA.fit(verbose=True)
     CX = np.matmul(C, X)
-    SCX = np.matmul(S,CX)
-    print()
-    plt.plot(CX[0])
-    plt.plot(CX[1])
-    plt.plot(CX[2])
+    SCX = np.matmul(S, CX)
+    plt.figure()
+    for vec in CX:
+        plt.plot(vec)
+    plt.title("Archetypes")
     plt.show()
-    plt.plot(X[1])
-    plt.plot(SCX[1])
+    plt.figure()
+    plt.plot(X[1], label="First signal of X")
+    plt.plot(SCX[1], label="Reconstructed signal with AA")
+    plt.legend()
     plt.show()
 
     plt.plot(X[2])

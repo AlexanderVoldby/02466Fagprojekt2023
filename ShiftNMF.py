@@ -42,6 +42,7 @@ class ShiftNMF(torch.nn.Module):
         # Broadcast Wf and H together
         V = torch.einsum('NdM,dM->NM', Wf, Hf)
         return V
+
     def fit(self, verbose=False):
         es = earlyStop(patience=5, offset=-0.01)
         running_loss = []
@@ -79,22 +80,22 @@ class ShiftNMF(torch.nn.Module):
 
 
 if __name__ == "__main__":
-    nmf = ShiftNMF(X_clean, 2, shift_constraint=5)
+    nmf = ShiftNMF(X_clean, 4, shift_constraint=5)
     nmf.to(device)
     W, H, tau = nmf.fit(verbose=True)
 
-    # plt.figure()
-    # for signal in H:
-    #     plt.plot(signal)
-    # plt.title("H - the latent variables")
-    # plt.show()
+    plt.figure()
+    for signal in H:
+        plt.plot(signal)
+    plt.title("H - the latent variables")
+    plt.show()
 
 
-    # plt.figure()
-    # plt.imshow(W)
-    # plt.colorbar()
-    # plt.title("W - The mixings")
-    # plt.show()
+    plt.figure()
+    plt.imshow(W)
+    plt.colorbar()
+    plt.title("W - The mixings")
+    plt.show()
 
     plt.figure()
     plt.imshow(tau)
