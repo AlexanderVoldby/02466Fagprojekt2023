@@ -2,7 +2,7 @@ import torch
 
 from helpers.data import X, X_clean
 from helpers.callbacks import RelativeStopper, ChangeStopper
-from helpers.losses import ShiftNMFLoss
+from helpers.losses import ShiftNMFLoss, MVR_ShiftNMF_Loss
 import matplotlib.pyplot as plt
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -51,7 +51,7 @@ class ShiftNMF(torch.nn.Module):
 
     def fit(self, verbose=False):
         # TODO: Make a method with relative error (loss / FrobeniusNorm(data))
-        stopper = ChangeStopper() # Should it be fft.fft(X)?
+        stopper = ChangeStopper(alpha=1e-8)
         running_loss = []
         while not stopper.trigger():
             # zero optimizer gradient
@@ -67,7 +67,7 @@ class ShiftNMF(torch.nn.Module):
             # Update W, H and tau
             self.optim.step()
             running_loss.append(loss.item())
-            stopper.loss = loss.item()
+            stopper.track_loss(loss)
 
             # print loss
             if verbose:

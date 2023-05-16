@@ -1,6 +1,5 @@
 import torch
-
-from helpers.callbacks import earlyStop
+from helpers.callbacks import ChangeStopper
 from helpers.losses import frobeniusLoss
 
 
@@ -19,31 +18,29 @@ class torchAA(torch.nn.Module):
         # DxN (C) * NxM (X) =  DxM (CX)
         # NxD (S) *  DxM (CX) = NxM (SCX)    
         
-        self.C_tilde = torch.nn.Parameter(torch.rand(rank, n_row, requires_grad=True))
-        self.S_tilde = torch.nn.Parameter(torch.rand(n_row, rank, requires_grad=True))
-        self.C = lambda: self.softmax(self.C_tilde)
-        self.S = lambda: self.softmax(self.S_tilde)
+        self.C = torch.nn.Parameter(torch.rand(rank, n_row, requires_grad=True))
+        self.S = torch.nn.Parameter(torch.rand(n_row, rank, requires_grad=True))
+
 
     def forward(self):
         # Implementation of AA - F(C, S) = ||X - XCS||^2
 
         # first matrix Multiplication with softmax
-        CX = torch.matmul(self.C().double(), self.X.double())
+        CX = torch.matmul(self.softmax(self.C).double(), self.X)
 
         # Second matrix multiplication with softmax
-        SCX = torch.matmul(self.S().double(), CX.double())
+        SCX = torch.matmul(self.softmax(self.S).double(), CX)
 
         return SCX
 
     def fit(self, verbose=False):
         optimizer = torch.optim.Adam(self.parameters(), lr=0.3)
 
-        # early stopping
-        es = earlyStop(patience=5, offset=-0.001)
-
+        # Convergence criteria
+        stopper = ChangeStopper()
         running_loss = []
 
-        while (not es.trigger()):
+        while not stopper.trigger():
             # zero optimizer gradient
             optimizer.zero_grad()
 
@@ -61,22 +58,19 @@ class torchAA(torch.nn.Module):
             running_loss.append(loss.item())
 
             # count with early stopping
-            es.count(loss.item())
+            stopper.track_loss(loss)
 
             # print loss
-            if verbose and len(running_loss) % 50 == 0:
-                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}", end='\r')
+            if verbose:
+                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}")
 
-        C, S = list(self.parameters())
-
-        C = self.softmax(C)
-        S = self.softmax(S)
+        C = self.softmax(self.C)
+        S = self.softmax(self.S)
 
         C = C.detach().numpy()
         S = S.detach().numpy()
 
         return C, S
-    
 
 
 if __name__ == "__main__":
@@ -85,7 +79,7 @@ if __name__ == "__main__":
     import scipy.io
     mat = scipy.io.loadmat('helpers/data/NMR_mix_DoE.mat')
 
-    #Get X and Labels. Probably different for the other dataset, but i didn't check :)
+    # Get X and Labels. Probably different for the other dataset, but i didn't check :)
     X = mat.get('xData')
     
     AA = torchAA(X, 3)

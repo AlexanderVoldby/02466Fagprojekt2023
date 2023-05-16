@@ -6,7 +6,7 @@ from sklearn import metrics
 import matplotlib.pyplot as plt
 
 
-def explained_variance(prediction, data, scorer=metrics.explained_variance_score):
+def explained_variance(data, prediction, scorer=metrics.explained_variance_score):
     return scorer(data, prediction)
 
 
@@ -38,7 +38,7 @@ plt.show()
 # Fit NMF with 3 components corresponding to the 3 alcohol types
 nmf = NMF(X, 3)
 W, H = nmf.fit(verbose=True)
-print(f"Expained variance by NMF (1 run): {explained_variance(nmf.forward(), X)}")
+print(f"Expained variance by NMF (1 run): {explained_variance(X, nmf.forward().detach().numpy())}")
 # Plot the signals and the mixings found by NMF
 plt.figure()
 for signal in H:
@@ -49,7 +49,7 @@ plt.show()
 # Same but with AA
 aa = torchAA(X, 3)
 C, S = aa.fit(verbose=True)
-print(f"Expained variance by AA (1 run): {explained_variance(aa.forward(), X)}")
+print(f"Expained variance by AA (1 run): {explained_variance(X, aa.forward().detach().numpy())}")
 archetypes = np.matmul(C, X)
 for signal in archetypes:
     plt.plot(signal)

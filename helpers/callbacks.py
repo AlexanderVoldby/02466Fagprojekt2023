@@ -30,15 +30,29 @@ class RelativeStopper:
         self.alpha = alpha
         self.loss = 1e9
 
+    def track_loss(self, loss):
+        self.loss = loss
+
     def trigger(self):
         return self.loss/self.norm < self.alpha
 
 
 class ChangeStopper:
-    def __init__(self, alpha=1e-6):
+    def __init__(self, alpha=1e-8):
         self.alpha = alpha
-        self.ploss = 1e9
-        self.loss = 0
+        self.ploss = None
+        self.loss = None
+
+    def track_loss(self, loss):
+        if self.loss is None:
+            self.loss = loss
+
+        else:
+            self.ploss = self.loss
+            self.loss = loss
 
     def trigger(self):
-        return (self.ploss - self.loss) < self.alpha
+        if self.ploss is None:
+            return False
+        else:
+            return abs((self.ploss - self.loss)/self.ploss) < self.alpha

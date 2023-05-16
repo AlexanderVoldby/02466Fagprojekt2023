@@ -40,13 +40,13 @@ class MVR_ShiftNMF_Loss(torch.nn.Module):
     def __init__(self, x: torch.tensor, lamb=0.01):
         super().__init__()
         self.N, self.M = x.shape
-        self.Xf = torch.fft.fft(x)
+        self.Xf = x
         self.lamb = lamb
-        self.eps = 1e-6
+        self.eps = 1e-9
 
-    def forward(self, inp, W): # Loss function must take the reconstruction and H.
+    def forward(self, inp, H): # Loss function must take the reconstruction and H.
         loss = 1 / (2 * self.M) * torch.linalg.matrix_norm(self.Xf - inp, ord='fro')**2
-        vol_W = torch.det(torch.matmul(W.T, W) + self.eps)
-        reg = self.lamb/2 * vol_W
-        print(f"Loss: {loss}, Regularization: {reg}")
+        vol_W = torch.det(torch.matmul(H, H.T) + self.eps)
+        reg = self.lamb * vol_W
+        # print(f"Loss: {loss}, Regularization: {reg}")
         return loss + reg
