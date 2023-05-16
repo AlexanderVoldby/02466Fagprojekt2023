@@ -1,4 +1,8 @@
 /visualization.ipynb
+/test.ipynb
+/__pychache__
+/helpers/__pychache__
 *.m
 *.parquet
+*.pyc
 *.pyc

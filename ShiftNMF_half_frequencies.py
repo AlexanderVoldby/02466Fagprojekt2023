@@ -2,7 +2,7 @@ import torch
 
 from helpers.data import X, X_clean
 from helpers.callbacks import earlyStop
-from helpers.losses import ShiftNMFLoss
+from helpers.losses import ShiftNMFLoss_halff
 import matplotlib.pyplot as plt
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -19,7 +19,7 @@ class ShiftNMF(torch.nn.Module):
         
         self.N, self.M = X.shape
         self.softplus = torch.nn.Softplus()
-        self.lossfn = ShiftNMFLoss(self.X)
+        self.lossfn = ShiftNMFLoss_halff(self.X)
         
         # Initialization of Tensors/Matrices a and b with size NxR and RxM
         # Introduce regularization on W with min volume by making W have unit norm by dividing through
@@ -28,19 +28,28 @@ class ShiftNMF(torch.nn.Module):
         self.H = torch.nn.Parameter(torch.rand(rank, self.M, requires_grad=True))
         # TODO: Constrain tau by using tanh and multiplying with a max/min value
         # self.tau = torch.nn.Parameter(torch.tanh(torch.rand(self.N, self.rank) * 2000 - 1000), requires_grad=True)
-        self.tau = torch.nn.Parameter(torch.rand(self.N, self.rank)*2*self.shift_constraint-self.shift_constraint, requires_grad=True)
+        self.tau = torch.nn.Parameter(torch.rand(self.N, self.rank), requires_grad=True)
         self.optim = torch.optim.Adam(self.parameters(), lr=0.2)
 
     def forward(self):
-        # The underlying signals in the frequency space
-        Hf = torch.fft.fft(self.softplus(self.H))
-        # The matrix that approximates the observations
-        # Needs to be N x d x M
+        Xf = torch.fft.fft(self.X, dim=1)
+        # Keep only the first half of the Fourier transform (due to symmetry)
+        Xf = Xf[:, :(Xf.shape[1] // 2) + 1]
+        # Get the size of Xf
+        Nf = Xf.shape
+        # Fourier transform of H along the second dimension
+        Hf = torch.fft.fft(self.H, dim=1)
+        # Keep only the first Nf[1] elements of the Fourier transform of H
+        Hf = Hf[:, :Nf[1]]
+        # Construct the shifted Fourier transform of H
+        Hf_reverse = torch.flip(Hf[:, 1:Nf[1]-1], dims=[1])
+        # Concatenate the original columns with the reversed columns along the second dimension
+        Hft = torch.cat((Hf, torch.conj(Hf_reverse)), dim=1)
         f = torch.arange(0, self.M) / self.M
         omega = torch.exp(-1j*2 * torch.pi*torch.einsum('Nd,M->NdM', self.tau, f))
         Wf = torch.einsum('Nd,NdM->NdM', self.softplus(self.W), omega)
         # Broadcast Wf and H together
-        V = torch.einsum('NdM,dM->NM', Wf, Hf)
+        V = torch.einsum('NdM,dM->NM', Wf, Hft)
         return V
 
     def fit(self, verbose=False):
@@ -58,8 +67,6 @@ class ShiftNMF(torch.nn.Module):
             loss.backward()
 
             # Update W, H and tau
-            print()
-            # TODO: Or instead constrain tau to make shifts within +/- 1000 when we take the step
             self.optim.step()
 
             running_loss.append(loss.item())
@@ -73,8 +80,7 @@ class ShiftNMF(torch.nn.Module):
 
         W = self.softplus(W).detach().numpy()
         H = self.softplus(H).detach().numpy()
-        tau = torch.tanh(tau.detach()).numpy() * self.shift_constraint
-        # tau = tau.detach().numpy()
+        tau = tau.detach().numpy()
 
         return W, H, tau
 
