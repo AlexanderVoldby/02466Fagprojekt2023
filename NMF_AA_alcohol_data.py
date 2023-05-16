@@ -6,14 +6,14 @@ from sklearn import metrics
 import matplotlib.pyplot as plt
 
 
-def explained_variance(latent_var, mixing, data, scorer=metrics.explained_variance_score):
-    prediction = np.matmul(mixing, latent_var)
+def explained_variance(prediction, data, scorer=metrics.explained_variance_score):
     return scorer(data, prediction)
 
-#load data from .MAT file
+
+# load data from .MAT file
 mat = scipy.io.loadmat('helpers/data/NMR_mix_DoE.mat')
 
-#Get X and Labels. Probably different for the other dataset, but i didn't check :)
+# Get X and Labels. Probably different for the other dataset, but i didn't check :)
 X = mat.get('xData')
 targets = mat.get('yData')
 target_labels = mat.get('yLabels')
@@ -38,7 +38,7 @@ plt.show()
 # Fit NMF with 3 components corresponding to the 3 alcohol types
 nmf = NMF(X, 3)
 W, H = nmf.fit(verbose=True)
-print(f"Expained variance by NMF (1 run): {explained_variance(H, W, X)}")
+print(f"Expained variance by NMF (1 run): {explained_variance(nmf.forward(), X)}")
 # Plot the signals and the mixings found by NMF
 plt.figure()
 for signal in H:
@@ -49,7 +49,7 @@ plt.show()
 # Same but with AA
 aa = torchAA(X, 3)
 C, S = aa.fit(verbose=True)
-print(f"Expained variance by AA (1 run): {explained_variance(np.matmul(C, X), S, X)}")
+print(f"Expained variance by AA (1 run): {explained_variance(aa.forward(), X)}")
 archetypes = np.matmul(C, X)
 for signal in archetypes:
     plt.plot(signal)

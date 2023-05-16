@@ -1,7 +1,7 @@
 import torch
 
 from helpers.data import X
-from helpers.callbacks import earlyStop
+from helpers.callbacks import RelativeStopper
 from helpers.losses import frobeniusLoss
 
 
@@ -25,9 +25,9 @@ class NMF(torch.nn.Module):
         return WH
 
     def fit(self, verbose=False):
-        es = earlyStop(patience=5, offset=-0.1)
+        stopper = RelativeStopper(self.X)
         running_loss = []
-        while not es.trigger():
+        while not stopper.trigger():
             # zero optimizer gradient
             self.optim.zero_grad()
 
@@ -43,7 +43,7 @@ class NMF(torch.nn.Module):
             self.optim.step()
 
             running_loss.append(loss.item())
-            es.count(loss.item())
+            stopper.loss = loss
 
             # print loss
             if verbose and len(running_loss) % 50 == 0:

@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from ShiftNMF import ShiftNMF
+from ShiftNMF_half_frequencies import ShiftNMF
 np.random.seed(42069)
 
 # Define random sources, mixings and shifts; H, W and tau
@@ -15,19 +15,14 @@ def gauss(mu, s, time):
 
 
 def shift_dataset(W, H, tau):
-    X_shaped = np.matmul(W, H)
-    N, M = X_shaped.shape
-    Xf = np.fft.fft(X_shaped, axis=1)
-    # Keep only the first half of the Fourier transform
-    Xf = Xf[:, :(Xf.shape[1] // 2) + 1]
-    # Get the size of Xf
-    Nf = Xf.shape
+    # Get half the frequencies
+    Nf = H.shape[1] // 2 + 1
     # Fourier transform of S along the second dimension
     Hf = np.fft.fft(H, axis=1)
     # Keep only the first Nf[1] elements of the Fourier transform of S
-    Hf = Hf[:, :Nf[1]]
+    Hf = Hf[:, :Nf]
     # Construct the shifted Fourier transform of S
-    Hf_reverse = np.fliplr(Hf[:, 1:Nf[1] - 1])
+    Hf_reverse = np.fliplr(Hf[:, 1:Nf - 1])
     # Concatenate the original columns with the reversed columns along the second dimension
     Hft = np.concatenate((Hf, np.conj(Hf_reverse)), axis=1)
     f = np.arange(0, M) / M
@@ -63,9 +58,7 @@ plt.show()
 
 # Try to find real components with shiftNMF:
 shiftnmf = ShiftNMF(X, 3)
-W_, H_, tau_ = shiftnmf.fit()
-print(W_)
-print(W)
+W_, H_, tau_ = shiftnmf.fit(verbose=True)
 # Plot the signals found by shiftNMF
 plt.figure()
 for signal in H_:

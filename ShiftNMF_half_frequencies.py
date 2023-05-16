@@ -1,8 +1,8 @@
 import torch
 
 from helpers.data import X, X_clean
-from helpers.callbacks import earlyStop
-from helpers.losses import ShiftNMFLoss_halff
+from helpers.callbacks import RelativeStopper, ChangeStopper
+from helpers.losses import ShiftNMFLoss
 import matplotlib.pyplot as plt
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -19,7 +19,7 @@ class ShiftNMF(torch.nn.Module):
         
         self.N, self.M = X.shape
         self.softplus = torch.nn.Softplus()
-        self.lossfn = ShiftNMFLoss_halff(self.X)
+        self.lossfn = ShiftNMFLoss(torch.fft.fft(self.X))
         
         # Initialization of Tensors/Matrices a and b with size NxR and RxM
         # Introduce regularization on W with min volume by making W have unit norm by dividing through
@@ -32,30 +32,28 @@ class ShiftNMF(torch.nn.Module):
         self.optim = torch.optim.Adam(self.parameters(), lr=0.2)
 
     def forward(self):
-        Xf = torch.fft.fft(self.X, dim=1)
-        # Keep only the first half of the Fourier transform (due to symmetry)
-        Xf = Xf[:, :(Xf.shape[1] // 2) + 1]
-        # Get the size of Xf
-        Nf = Xf.shape
+        # Get half of the frequencies
+        Nf = self.M // 2 + 1
         # Fourier transform of H along the second dimension
-        Hf = torch.fft.fft(self.H, dim=1)
+        Hf = torch.fft.fft(self.softplus(self.H), dim=1)
         # Keep only the first Nf[1] elements of the Fourier transform of H
-        Hf = Hf[:, :Nf[1]]
+        Hf = Hf[:, :Nf]
         # Construct the shifted Fourier transform of H
-        Hf_reverse = torch.flip(Hf[:, 1:Nf[1]-1], dims=[1])
+        Hf_reverse = torch.flip(Hf[:, 1:Nf-1], dims=[1])
         # Concatenate the original columns with the reversed columns along the second dimension
         Hft = torch.cat((Hf, torch.conj(Hf_reverse)), dim=1)
         f = torch.arange(0, self.M) / self.M
-        omega = torch.exp(-1j*2 * torch.pi*torch.einsum('Nd,M->NdM', self.tau, f))
+        omega = torch.exp(-1j*2 * torch.pi * torch.einsum('Nd,M->NdM', self.tau, f))
         Wf = torch.einsum('Nd,NdM->NdM', self.softplus(self.W), omega)
         # Broadcast Wf and H together
         V = torch.einsum('NdM,dM->NM', Wf, Hft)
         return V
 
     def fit(self, verbose=False):
-        es = earlyStop(patience=5, offset=-0.01)
+        # TODO: Make a method with relative error (loss / FrobeniusNorm(data))
+        stopper = ChangeStopper() # Should it be fft.fft(X)?
         running_loss = []
-        while not es.trigger():
+        while not stopper.trigger():
             # zero optimizer gradient
             self.optim.zero_grad()
 
@@ -68,19 +66,16 @@ class ShiftNMF(torch.nn.Module):
 
             # Update W, H and tau
             self.optim.step()
-
             running_loss.append(loss.item())
-            es.count(loss.item())
+            stopper.loss = loss.item()
 
             # print loss
             if verbose:
                 print(f"epoch: {len(running_loss)}, Loss: {loss.item()}")
 
-        W, H, tau = list(self.parameters())
-
-        W = self.softplus(W).detach().numpy()
-        H = self.softplus(H).detach().numpy()
-        tau = tau.detach().numpy()
+        W = self.softplus(self.W).detach().numpy()
+        H = self.softplus(self.H).detach().numpy()
+        tau = self.tau.detach().numpy()
 
         return W, H, tau
 

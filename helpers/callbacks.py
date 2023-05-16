@@ -1,4 +1,6 @@
 import numpy as np
+import torch.linalg
+
 
 #Custom implementation of early stopping to allow continous running of the model until optimal paramters have been found
 #this allows for an offset to be added or removed from the lowest loss to stop early when the gradient flattens
@@ -20,3 +22,23 @@ class earlyStop():
             self.counter = 0
         else:
             self.counter += 1
+
+class RelativeStopper:
+
+    def __init__(self, data, alpha=1e-6):
+        self.norm = torch.linalg.matrix_norm(data, ord="fro").item()**2
+        self.alpha = alpha
+        self.loss = 1e9
+
+    def trigger(self):
+        return self.loss/self.norm < self.alpha
+
+
+class ChangeStopper:
+    def __init__(self, alpha=1e-6):
+        self.alpha = alpha
+        self.ploss = 1e9
+        self.loss = 0
+
+    def trigger(self):
+        return (self.ploss - self.loss) < self.alpha

@@ -21,8 +21,8 @@ class torchAA(torch.nn.Module):
         
         self.C_tilde = torch.nn.Parameter(torch.rand(rank, n_row, requires_grad=True))
         self.S_tilde = torch.nn.Parameter(torch.rand(n_row, rank, requires_grad=True))
-        self.C = lambda:self.softmax(self.C_tilde)
-        self.S = lambda:self.softmax(self.S_tilde)
+        self.C = lambda: self.softmax(self.C_tilde)
+        self.S = lambda: self.softmax(self.S_tilde)
 
     def forward(self):
         # Implementation of AA - F(C, S) = ||X - XCS||^2
