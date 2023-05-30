@@ -33,7 +33,7 @@ class torchAA(torch.nn.Module):
 
         return SCX
 
-    def fit(self, verbose=False):
+    def fit(self, verbose=False, return_loss=False):
         optimizer = torch.optim.Adam(self.parameters(), lr=0.3)
 
         # Convergence criteria
@@ -70,7 +70,10 @@ class torchAA(torch.nn.Module):
         C = C.detach().numpy()
         S = S.detach().numpy()
 
-        return C, S
+        if return_loss:
+            return C, S, running_loss
+        else:
+            return C, S
 
 
 if __name__ == "__main__":

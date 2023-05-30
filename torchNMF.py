@@ -24,7 +24,7 @@ class NMF(torch.nn.Module):
         WH = torch.matmul(self.softplus(self.W), self.softplus(self.H))
         return WH
 
-    def fit(self, verbose=False):
+    def fit(self, verbose=False, return_loss=False):
         stopper = ChangeStopper()
         running_loss = []
         while not stopper.trigger():
@@ -52,4 +52,7 @@ class NMF(torch.nn.Module):
         W = self.softplus(self.W).detach().numpy()
         H = self.softplus(self.H).detach().numpy()
 
-        return W, H
+        if return_loss:
+            return W, H, running_loss
+        else:
+            return W, H
