@@ -1,6 +1,5 @@
 import torch
-
-from helpers.data import X
+from torch.optim import Adam, lr_scheduler
 from helpers.callbacks import RelativeStopper, ChangeStopper
 from helpers.losses import frobeniusLoss
 
@@ -18,8 +17,8 @@ class NMF(torch.nn.Module):
         self.W = torch.nn.Parameter(torch.rand(n_row, rank, requires_grad=True))
         self.H = torch.nn.Parameter(torch.rand(rank, n_col, requires_grad=True))
 
-        self.optim = torch.optim.Adam(self.parameters(), lr=0.3)
-
+        self.optim = Adam(self.parameters(), lr=0.5)
+        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optim, mode='min', factor=0.1, patience=5)
     def forward(self):
         WH = torch.matmul(self.softplus(self.W), self.softplus(self.H))
         return WH
@@ -41,6 +40,7 @@ class NMF(torch.nn.Module):
 
             # Update W and H
             self.optim.step()
+            self.scheduler.step(loss)
 
             running_loss.append(loss.item())
             stopper.track_loss(loss)

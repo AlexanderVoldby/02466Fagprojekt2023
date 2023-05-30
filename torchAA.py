@@ -1,4 +1,5 @@
 import torch
+from torch.optim import Adam, lr_scheduler
 from helpers.callbacks import ChangeStopper
 from helpers.losses import frobeniusLoss
 
@@ -34,7 +35,8 @@ class torchAA(torch.nn.Module):
         return SCX
 
     def fit(self, verbose=False, return_loss=False):
-        optimizer = torch.optim.Adam(self.parameters(), lr=0.3)
+        optimizer = Adam(self.parameters(), lr=0.5)
+        scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5)
 
         # Convergence criteria
         stopper = ChangeStopper()
@@ -53,7 +55,7 @@ class torchAA(torch.nn.Module):
 
             # Update A and B
             optimizer.step()
-
+            scheduler.step(loss)
             # append loss for graphing
             running_loss.append(loss.item())
 

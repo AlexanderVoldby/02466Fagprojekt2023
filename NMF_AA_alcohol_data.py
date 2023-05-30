@@ -49,36 +49,16 @@ axs[2].plot(X[[np.all(x == [0, 0, 100]) for x in targets]][0], label="Pentanol")
 axs[2].set_title("Pentanol")
 plt.show()
 
-# Fit NMF with 3 components corresponding to the 3 alcohol types
-nmf = NMF(X, 3)
-W, H = nmf.fit(verbose=True)
-print(f"Expained variance by NMF (1 run): {explained_variance(X, nmf.forward().detach().numpy())}")
-# Plot the signals and the mixings found by NMF
-plt.figure()
-for signal in H:
-    plt.plot(signal)
-plt.title("Signals found by NMF")
-plt.show()
-
-# Same but with AA
-aa = torchAA(X, 3)
-C, S = aa.fit(verbose=True)
-print(f"Expained variance by AA (1 run): {explained_variance(X, aa.forward().detach().numpy())}")
-archetypes = np.matmul(C, X)
-for signal in archetypes:
-    plt.plot(signal)
-plt.title("Archetypes found by AA")
-plt.show()
-
 # Fit NMF and AA 10 times and get an average loss curve for each as well as an average explained variance
 max_components = 10
 aa_explained = []
 nmf_explained = []
 for i in range(max_components):
+    print(F"Components: {i+1}")
     nmf = NMF(X, rank=i+1)
     aa = torchAA(X, rank=i+1)
-    nmf.fit()
-    aa.fit()
+    nmf.fit(verbose=True)
+    aa.fit(verbose=True)
     nmf_explained.append(explained_variance(X, nmf.forward().detach().numpy()))
     aa_explained.append(explained_variance(X, aa.forward().detach().numpy()))
 
@@ -100,8 +80,8 @@ for i in range(n_iterations):
     print(f"Iteration {i+1}")
     nmf = NMF(X, rank=3)
     aa = torchAA(X, rank=3)
-    nmf_W[i], nmf_H[i], nmf_loss[i] = nmf.fit(return_loss=True)
-    aa_C[i], aa_S[i], aa_loss[i] = aa.fit(return_loss=True)
+    nmf_W[i], nmf_H[i], nmf_loss[i] = nmf.fit(verbose=True, return_loss=True)
+    aa_C[i], aa_S[i], aa_loss[i] = aa.fit(verbose=True, return_loss=True)
 
 min_nmf_length = min(len(row) for row in nmf_loss)
 min_aa_length = min(len(row) for row in aa_loss)
