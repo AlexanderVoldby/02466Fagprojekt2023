@@ -9,9 +9,8 @@ class NMF(torch.nn.Module):
         super().__init__()
 
         n_row, n_col = X.shape
-        self.X = torch.tensor(X)
         self.softplus = torch.nn.Softplus()
-        self.lossfn = frobeniusLoss(self.X)
+        self.lossfn = frobeniusLoss(torch.tensor(X))
 
         # Initialization of Tensors/Matrices a and b with size NxR and RxM
         self.W = torch.nn.Parameter(torch.rand(n_row, rank, requires_grad=True))
@@ -19,6 +18,7 @@ class NMF(torch.nn.Module):
 
         self.optim = Adam(self.parameters(), lr=0.5)
         self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optim, mode='min', factor=0.1, patience=5)
+
     def forward(self):
         WH = torch.matmul(self.softplus(self.W), self.softplus(self.H))
         return WH

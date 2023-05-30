@@ -8,7 +8,7 @@ class frobeniusLoss(torch.nn.Module):
         self.X = x
     
     def forward(self, input):
-        return torch.linalg.matrix_norm(self.X - input, ord='fro')
+        return torch.linalg.matrix_norm(self.X - input, ord='fro')**2
 
 
 class ShiftNMFLoss(torch.nn.Module):
@@ -45,7 +45,6 @@ class MVR_ShiftNMF_Loss(torch.nn.Module):
 
     def forward(self, inp, H): # Loss function must take the reconstruction and H.
         loss = 1 / (2 * self.M) * torch.linalg.matrix_norm(self.Xf - inp, ord='fro')**2
-        vol_H = torch.det(torch.dot(H, H.T) + self.eps)
+        vol_H = torch.det(torch.matmul(H, H.T) + self.eps)
         reg = self.lamb * vol_H
-        # print(f"Loss: {loss}, Regularization: {reg}")
         return loss + reg

@@ -1,5 +1,5 @@
 import torch
-
+from torch.optim import Adam, lr_scheduler
 from helpers.data import X, X_clean
 from helpers.callbacks import RelativeStopper, ChangeStopper
 from helpers.losses import ShiftNMFLoss, MVR_ShiftNMF_Loss
@@ -20,7 +20,7 @@ class ShiftNMF(torch.nn.Module):
 
         self.N, self.M = X.shape
         self.softplus = torch.nn.Softplus()
-        self.softmax = torch.nn.Softmax(dim=0)
+        self.softmax = torch.nn.Softmax(dim=1)
         self.lossfn = MVR_ShiftNMF_Loss(torch.fft.fft(self.X))
 
         # Initialization of Tensors/Matrices a and b with size NxR and RxM
@@ -31,13 +31,14 @@ class ShiftNMF(torch.nn.Module):
         # TODO: Constrain tau by using tanh and multiplying with a max/min value
         # self.tau = torch.nn.Parameter(torch.tanh(torch.rand(self.N, self.rank) * 2000 - 1000), requires_grad=True)
         self.tau = torch.nn.Parameter(torch.rand(self.N, self.rank), requires_grad=True)
-        self.optim = torch.optim.Adam(self.parameters(), lr=0.2)
+        self.optim = Adam(self.parameters(), lr=0.5)
+        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optim, mode='min', factor=0.1, patience=5)
 
     def forward(self):
         # Get half of the frequencies
         Nf = self.M // 2 + 1
         # Fourier transform of H along the second dimension
-        Hf = torch.fft.fft(self.softplus(self.H), dim=1)
+        Hf = torch.fft.fft(self.softmax(self.H), dim=1)
         # Keep only the first Nf[1] elements of the Fourier transform of H
         Hf = Hf[:, :Nf]
         # Construct the shifted Fourier transform of H
@@ -52,8 +53,7 @@ class ShiftNMF(torch.nn.Module):
         return V
 
     def fit(self, verbose=False):
-        # TODO: Make a method with relative error (loss / FrobeniusNorm(data))
-        stopper = ChangeStopper(alpha=1e-6)
+        stopper = ChangeStopper(alpha=1e-8)
         running_loss = []
         while not stopper.trigger():
             # zero optimizer gradient
@@ -63,11 +63,12 @@ class ShiftNMF(torch.nn.Module):
             output = self.forward()
 
             # backward
-            loss = self.lossfn(output, self.softplus(self.H))
+            loss = self.lossfn(output, self.softmax(self.H))
             loss.backward()
 
             # Update W, H and tau
             self.optim.step()
+            self.scheduler.step(loss)
             running_loss.append(loss.item())
             stopper.track_loss(loss)
 
@@ -75,8 +76,8 @@ class ShiftNMF(torch.nn.Module):
             if verbose:
                 print(f"epoch: {len(running_loss)}, Loss: {loss.item()}")
 
-        W = self.softplus(self.W).detach().numpy()
-        H = self.softplus(self.H).detach().numpy()
+        W = self.softmax(self.W).detach().numpy()
+        H = self.softmax(self.H).detach().numpy()
         tau = self.tau.detach().numpy()
 
         return W, H, tau

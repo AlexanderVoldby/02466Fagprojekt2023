@@ -12,19 +12,14 @@ class torchAA(torch.nn.Module):
         n_row, n_col = X.shape
         self.X = torch.tensor(X)
 
-        # softmax layer
         self.softmax = torch.nn.Softmax(dim=0)
         self.lossfn = frobeniusLoss(self.X)
-        # Initialization of Tensors/Matrices S and C with size Col x Rank and Rank x Col
-        # DxN (C) * NxM (X) =  DxM (CX)
-        # NxD (S) *  DxM (CX) = NxM (SCX)    
         
         self.C = torch.nn.Parameter(torch.rand(rank, n_row, requires_grad=True))
         self.S = torch.nn.Parameter(torch.rand(n_row, rank, requires_grad=True))
 
 
     def forward(self):
-        # Implementation of AA - F(C, S) = ||X - XCS||^2
 
         # first matrix Multiplication with softmax
         CX = torch.matmul(self.softmax(self.C).double(), self.X)
