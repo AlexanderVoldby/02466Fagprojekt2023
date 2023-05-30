@@ -18,7 +18,6 @@ class ShiftNMFLoss(torch.nn.Module):
         self.X = x
 
     def forward(self, input):
-        # TODO: Add regularization with the determinant of the W matrix
         loss = 1/(2*self.M) * torch.linalg.matrix_norm(self.X - input, ord='fro')**2
         return loss
 
@@ -46,7 +45,7 @@ class MVR_ShiftNMF_Loss(torch.nn.Module):
 
     def forward(self, inp, H): # Loss function must take the reconstruction and H.
         loss = 1 / (2 * self.M) * torch.linalg.matrix_norm(self.Xf - inp, ord='fro')**2
-        vol_W = torch.det(torch.matmul(H, H.T) + self.eps)
-        reg = self.lamb * vol_W
+        vol_H = torch.det(torch.dot(H, H.T) + self.eps)
+        reg = self.lamb * vol_H
         # print(f"Loss: {loss}, Regularization: {reg}")
         return loss + reg

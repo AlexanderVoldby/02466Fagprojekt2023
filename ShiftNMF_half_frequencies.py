@@ -1,8 +1,8 @@
 import torch
-
+from torch.optim import Adam, lr_scheduler
 from helpers.data import X, X_clean
-from helpers.callbacks import RelativeStopper, ChangeStopper
-from helpers.losses import ShiftNMFLoss, MVR_ShiftNMF_Loss
+from helpers.callbacks import ChangeStopper
+from helpers.losses import ShiftNMFLoss
 import matplotlib.pyplot as plt
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -29,7 +29,8 @@ class ShiftNMF(torch.nn.Module):
         # TODO: Constrain tau by using tanh and multiplying with a max/min value
         # self.tau = torch.nn.Parameter(torch.tanh(torch.rand(self.N, self.rank) * 2000 - 1000), requires_grad=True)
         self.tau = torch.nn.Parameter(torch.rand(self.N, self.rank), requires_grad=True)
-        self.optim = torch.optim.Adam(self.parameters(), lr=0.2)
+        self.optim = Adam(self.parameters(), lr=0.2)
+        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optim, mode='min', factor=0.1, patience=5)
 
     def forward(self):
         # Get half of the frequencies
@@ -66,6 +67,7 @@ class ShiftNMF(torch.nn.Module):
 
             # Update W, H and tau
             self.optim.step()
+            self.scheduler.step(loss)
             running_loss.append(loss.item())
             stopper.track_loss(loss)
 
