@@ -1,5 +1,4 @@
 import torch
-import numpy as np
 
 #Defining frobenius Loss
 class frobeniusLoss(torch.nn.Module):

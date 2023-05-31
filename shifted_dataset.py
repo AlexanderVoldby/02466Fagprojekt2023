@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from ShiftNMF_half_frequencies import ShiftNMF
-from torchNMF import NMF
+from torchNMF import NMF, MVR_NMF
 np.random.seed(42069)
 
 # Define random sources, mixings and shifts; H, W and tau
@@ -58,14 +58,14 @@ plt.title("Dataset build from mixing and shifts of the three sources")
 plt.show()
 
 # Try to find real components with shiftNMF:
-shiftnmf = ShiftNMF(X, 3)
-W_, H_, tau_ = shiftnmf.fit(verbose=True)
-# Plot the signals found by shiftNMF
-plt.figure()
-for signal in H_:
-    plt.plot(signal)
-plt.title("Signals determined by shiftNMF")
-plt.show()
+# shiftnmf = ShiftNMF(X, 3)
+# W_, H_, tau_ = shiftnmf.fit(verbose=True)
+# # Plot the signals found by shiftNMF
+# plt.figure()
+# for signal in H_:
+#     plt.plot(signal)
+# plt.title("Signals determined by shiftNMF")
+# plt.show()
 
 # Then with regular NMF:
 nmf = NMF(X, 3)

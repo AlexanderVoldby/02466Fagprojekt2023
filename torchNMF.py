@@ -1,6 +1,6 @@
 import torch
 from torch.optim import Adam, lr_scheduler
-from helpers.callbacks import RelativeStopper, ChangeStopper
+from helpers.callbacks import ChangeStopper
 from helpers.losses import frobeniusLoss, VolLoss
 
 
