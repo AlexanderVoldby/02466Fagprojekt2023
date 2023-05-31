@@ -2,6 +2,7 @@ import torch
 from torch.optim import Adam, lr_scheduler
 from helpers.callbacks import ChangeStopper
 from helpers.losses import frobeniusLoss, VolLoss
+from helpers.data import X_clean
 
 
 class NMF(torch.nn.Module):
@@ -110,3 +111,15 @@ class MVR_NMF(torch.nn.Module):
             return W, H, running_loss
         else:
             return W, H
+
+
+if __name__ == "__main__":
+    from helpers.callbacks import explained_variance
+    nmf = NMF(X_clean, 4)
+    mvr_nmf = MVR_NMF(X_clean, 4)
+
+    nmf.fit(verbose=True)
+    mvr_nmf.fit(verbose=True)
+
+    print(f"Explained variance NMF: {explained_variance(X_clean, nmf.forward().detach().numpy())}")
+    print(f"Explained variance MVR_NMF: {explained_variance(X_clean, mvr_nmf.forward().detach().numpy())}")

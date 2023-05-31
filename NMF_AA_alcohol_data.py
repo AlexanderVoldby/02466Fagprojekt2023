@@ -2,27 +2,9 @@ import scipy.io
 import numpy as np
 from torchNMF import NMF
 from torchAA import torchAA
+from helpers.callbacks import explained_variance
 from sklearn import metrics
 import matplotlib.pyplot as plt
-
-
-def explained_variance(original_data, reconstructed_data):
-    """
-    Calculate the explained variance between original and reconstructed data.
-
-    Args:
-        original_data (numpy.ndarray): The original dataset.
-        reconstructed_data (numpy.ndarray): The reconstructed dataset.
-
-    Returns:
-        float: The explained variance score.
-    """
-    numerator = np.sum(np.square(original_data - reconstructed_data))
-    denominator = np.sum(np.square(original_data - np.mean(original_data)))
-    explained_variance = 1 - (numerator / denominator)
-
-    return explained_variance
-
 
 # load data from .MAT file
 mat = scipy.io.loadmat('helpers/data/NMR_mix_DoE.mat')

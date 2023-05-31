@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from ShiftNMF_half_frequencies import ShiftNMF
+from helpers.callbacks import explained_variance
 from torchNMF import NMF, MVR_NMF
 np.random.seed(42069)
 

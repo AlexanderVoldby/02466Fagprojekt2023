@@ -2,8 +2,22 @@ import numpy as np
 import torch.linalg
 
 
-#Custom implementation of early stopping to allow continous running of the model until optimal paramters have been found
-#this allows for an offset to be added or removed from the lowest loss to stop early when the gradient flattens
+def explained_variance(original_data, reconstructed_data):
+    """
+    Calculate the explained variance between original and reconstructed data.
+
+    Args:
+        original_data (numpy.ndarray): The original dataset.
+        reconstructed_data (numpy.ndarray): The reconstructed dataset.
+
+    Returns:
+        float: The explained variance score.
+    """
+    numerator = np.sum(np.square(original_data - reconstructed_data))
+    denominator = np.sum(np.square(original_data - np.mean(original_data)))
+    explained_variance = 1 - (numerator / denominator)
+
+    return explained_variance
 class earlyStop():
     def __init__(self, patience = 5, offset = 0) -> None:
         self.patience = patience
