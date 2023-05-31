@@ -24,14 +24,12 @@ class ShiftNMFLoss(torch.nn.Module):
 
 class VolLoss(torch.nn.Module):
     def __init__(self, x: torch.tensor, alpha=0.1):
-        super(VolLoss, self).__init__()
+        super().__init__()
         self.X = x
         self.alpha = alpha
 
-
-    def forward(self, w, h, x):
-        # TODO: We might have to change to constraining on H since it should denote the source.
-        return torch.linalg.det(self.alpha*(h.T@h))+torch.linalg.matrix_norm(self.X - x, ord='fro')**2
+    def forward(self, x, h):
+        return self.alpha*torch.linalg.det(torch.matmul(h, h.T)+1e-9)+torch.linalg.matrix_norm(self.X - x, ord='fro')**2
 
 # Sparseness measure of the H-matrix
 
