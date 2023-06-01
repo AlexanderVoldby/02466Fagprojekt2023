@@ -24,8 +24,7 @@ class NMF(torch.nn.Module):
         WH = torch.matmul(self.softplus(self.W), self.softplus(self.H))
         return WH
 
-    def fit(self, verbose=False, return_loss=False):
-        stopper = ChangeStopper()
+    def fit(self, verbose=False, return_loss=False,  stopper=ChangeStopper()):
         running_loss = []
         while not stopper.trigger():
             # zero optimizer gradient
@@ -78,8 +77,7 @@ class MVR_NMF(torch.nn.Module):
         WH = torch.matmul(self.softmax(self.W), self.softmax(self.H))
         return WH
 
-    def fit(self, verbose=False, return_loss=False):
-        stopper = ChangeStopper()
+    def fit(self, verbose=False, return_loss=False, stopper = ChangeStopper()):
         running_loss = []
         while not stopper.trigger():
             # zero optimizer gradient
@@ -89,7 +87,6 @@ class MVR_NMF(torch.nn.Module):
             output = self.forward()
 
             # backward
-
             loss = self.lossfn.forward(output, self.softmax(self.H))
             loss.backward()
 
