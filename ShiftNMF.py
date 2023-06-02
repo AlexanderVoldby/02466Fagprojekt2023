@@ -38,7 +38,9 @@ class ShiftNMF(torch.nn.Module):
         # Needs to be N x d x M
         f = torch.arange(0, self.M) / self.M
         omega = torch.exp(-1j*2 * torch.pi*torch.einsum('Nd,M->NdM', self.tau, f))
-        Wf = torch.einsum('Nd,NdM->NdM', self.softplus(self.W), omega)
+        Wf = torch.einsum('Nd,NdM->NdM', self.softplus(self.W), omega) 
+        #W is encoding, so we put on the shift of each component.
+        
         # Broadcast Wf and H together
         V = torch.einsum('NdM,dM->NM', Wf, Hf)
         return V

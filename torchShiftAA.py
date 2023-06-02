@@ -1,6 +1,6 @@
 import torch
-
-from helpers.callbacks import earlyStop
+from torch.optim import Adam, lr_scheduler
+from helpers.callbacks import ChangeStopper
 from helpers.losses import frobeniusLoss
 from helpers.losses import ShiftNMFLoss
 
@@ -16,13 +16,13 @@ class torchShiftAA(torch.nn.Module):
 
         # softmax layer
         self.softmax = torch.nn.Softmax(dim=0)
-        self.softmax1 = torch.nn.Softmax(dim=1)
+        #self.softmax1 = torch.nn.Softmax(dim=1)
         self.softplus = torch.nn.Softplus()
 
 
-        #self.lossfn = frobeniusLoss(self.X)
+        self.lossfn = frobeniusLoss(torch.fft.fft(self.X))
         #Should be the same as NMF?
-        self.lossfn = ShiftNMFLoss(self.X)
+        #self.lossfn = ShiftNMFLoss(torch.fft.fft(self.X))
 
 
         # Initialization of Tensors/Matrices S and C with size Col x Rank and Rank x Col
@@ -33,12 +33,14 @@ class torchShiftAA(torch.nn.Module):
         self.S_tilde = torch.nn.Parameter(torch.rand(N, rank, requires_grad=True))
         self.tau_tilde = torch.nn.Parameter(torch.zeros(N, rank), requires_grad=True)
 
-        self.shift_constraint = 1000
+        self.shift_constraint = 100
 
         self.C = lambda:self.softmax(self.C_tilde)
-        #self.S = lambda:self.softmax(self.S_tilde)
-        self.S = lambda:self.softmax1(self.S_tilde)
-        self.tau = lambda:torch.tanh(self.tau_tilde)*self.shift_constraint
+        self.S = lambda:self.softmax(self.S_tilde)
+        #self.tau = lambda:torch.tanh(self.tau_tilde)*self.shift_constraint
+
+    def tau(self):
+        return torch.zeros(N, rank)
 
     def forward(self):
         # Implementation of shift AA.
@@ -47,39 +49,36 @@ class torchShiftAA(torch.nn.Module):
         omega = torch.exp(-1j*2 * torch.pi*torch.einsum('Nd,M->NdM', self.tau(), f))
         omega_neg = torch.exp(-1j*2 * torch.pi*torch.einsum('Nd,M->NdM', self.tau()*(-1), f))
 
-
         #data to frequency domain
         X_F = torch.fft.fft(self.X)
 
         #Aligned data (per component)
-        X_align = torch.einsum('NM,NdM->NdM',X_F,omega_neg)
-
+        X_F_align = torch.einsum('NM,NdM->NdM',X_F,omega_neg)
+        X_align = torch.fft.ifft(X_F_align)
         #The A matrix, (d,M) CX, in frequency domain
         self.A = torch.einsum('dN,NdM->dM',self.C().double(), X_align.double())
-
-        #A_F = torch.fft.fft(self.A)
-        
+        self.A_F = torch.fft.fft(self.A)
+        #self.A_F = torch.einsum('dN,NdM->dM',self.C().double(), X_F_align.double())
         #S_F = torch.einsum('Nd,NdM->NdM', self.S().double(), omega)
 
         # archetypes back shifted
-        A_shift = torch.einsum('dM,NdM->NdM', self.A.double(), omega.double())
+        #A_shift = torch.einsum('dM,NdM->NdM', self.A_F.double(), omega.double())
+        S_F = torch.einsum('Nd,NdM->NdM', self.S(), omega) 
 
         # Reconstruction
-        self.recon= torch.einsum('Nd,NdM->NM', self.S().double(), A_shift.double())
-
-        x = self.X - self.recon
-
+        self.recon = torch.einsum('NdM,dM->NM', S_F.double(), self.A_F.double())
+        x = self.recon
+        self.recon = torch.fft.ifft(self.recon)
         return x
 
-    def fit(self, verbose=False):
-        optimizer = torch.optim.Adam(self.parameters(), lr=0.4)
+    def fit(self, verbose=False, return_loss=False, stopper = ChangeStopper()):
+        optimizer = Adam(self.parameters(), lr=0.8)
+        scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5)
 
-        # early stopping
-        es = earlyStop(patience=5, offset=-0.001)
-
+        # Convergence criteria
         running_loss = []
 
-        while (not es.trigger()):
+        while not stopper.trigger():
             # zero optimizer gradient
             optimizer.zero_grad()
 
@@ -92,21 +91,21 @@ class torchShiftAA(torch.nn.Module):
 
             # Update A and B
             optimizer.step()
-
+            scheduler.step(loss)
             # append loss for graphing
             running_loss.append(loss.item())
 
             # count with early stopping
-            es.count(loss.item())
+            stopper.track_loss(loss)
 
             # print loss
             if verbose:
-                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}", end='\r')
+                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}")
 
         C, S, tau = list(self.parameters())
 
         C = self.softmax(C)
-        S = self.softmax1(S)
+        S = self.softmax(S)
         tau = torch.tanh(tau.detach()).numpy() * self.shift_constraint
 
         C = C.detach().numpy()
@@ -131,41 +130,31 @@ if __name__ == "__main__":
     print("test")
     C,S, tau = AA.fit(verbose=True)
 
-    f = np.arange(0, M) / M
-    omega = np.exp(-1j*2 * np.pi*np.einsum('Nd,M->NdM', tau, f))
-    omega_neg = np.exp(-1j*2 * np.pi*np.einsum('Nd,M->NdM', tau*(-1), f))
-    #Aligned data (per component)
-    X_F = np.fft.fft(X)
-    X_align = np.einsum('NM,NdM->NdM',X_F,omega_neg)
+    recon = AA.recon.detach().numpy()
+    A = AA.A.detach().numpy()
 
-    #The A matrix, (d,M) CX, in frequency domain
-    A = np.einsum('dN,NdM->dM',C, X_align)
-    A_shift = np.einsum('dM,NdM->NdM', A, omega)
-
-    # Reconstruction
-    recon = np.einsum('Nd,NdM->NM', S, A_shift)
+    CX = A
+    SCX = recon
     
-    CX = np.fft.ifft(A)
-    SCX = np.fft.ifft(recon)
-    print()
-    plt.plot(CX[0])
-    plt.plot(CX[1])
-    plt.plot(CX[2])
+    plt.figure()
+    for vec in CX:
+        plt.plot(vec)
+    plt.title("Archetypes")
     plt.show()
-
-    plt.plot(X[1], color='blue')
-    plt.plot(SCX[1], color='red')
+    plt.figure()
+    plt.plot(X[1], label="First signal of X")
+    plt.plot(SCX[1], label="Reconstructed signal with shift AA")
+    plt.legend()
     plt.show()
-
     # plt.plot(X[2])
     # plt.plot(SCX[2])
     # plt.show()
     
-plt.figure()
-plt.imshow(tau, aspect='auto', interpolation="none")
-ax = plt.gca()
-ax.set_xticks(np.arange(0, D, 1))
-plt.colorbar()
-plt.title("Tau")
-plt.show()
-#print(tau)
+    plt.figure()
+    plt.imshow(tau, aspect='auto', interpolation="none")
+    ax = plt.gca()
+    ax.set_xticks(np.arange(0, D, 1))
+    plt.colorbar()
+    plt.title("Tau")
+    plt.show()
+    #print(tau)

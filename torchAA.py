@@ -10,23 +10,23 @@ class torchAA(torch.nn.Module):
         super(torchAA, self).__init__()
 
         # Shape of Matrix for reproduction
-        n_row, n_col = X.shape
+        N, M = X.shape
         self.X = torch.tensor(X)
 
         self.softmax = torch.nn.Softmax(dim=0)
         self.lossfn = frobeniusLoss(self.X)
         
-        self.C = torch.nn.Parameter(torch.rand(rank, n_row, requires_grad=True))
-        self.S = torch.nn.Parameter(torch.rand(n_row, rank, requires_grad=True))
+        self.C = torch.nn.Parameter(torch.rand(rank, N, requires_grad=True))
+        self.S = torch.nn.Parameter(torch.rand(N, rank, requires_grad=True))
 
 
     def forward(self):
 
         # first matrix Multiplication with softmax
-        CX = torch.matmul(self.softmax(self.C).double(), self.X)
+        CX = torch.matmul(self.softmax(self.C).double(), self.X.double())
 
         # Second matrix multiplication with softmax
-        SCX = torch.matmul(self.softmax(self.S).double(), CX)
+        SCX = torch.matmul(self.softmax(self.S).double(), CX.double())
 
         return SCX
 
