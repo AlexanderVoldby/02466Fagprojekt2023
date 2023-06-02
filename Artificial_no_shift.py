@@ -59,32 +59,34 @@ plt.show()
 
 
 AA = torchAA(X, 3)
-C, S = AA.fit(verbose=True)
+C, S,loss = AA.fit(verbose=True, return_loss=True)
+print("loss1")
+print(loss[-1])
 CX = np.matmul(C, X)
 recon = np.matmul(S, CX)
 
 for signal in CX:
     plt.plot(signal)
-plt.title("Found components AA")
+plt.title("Found components AA1")
 plt.show()
 
 plt.plot(recon[1])
 plt.plot(X[1])
-plt.title("Reconstruction of first sample vs first sample (AA)")
+plt.title("Reconstruction of first sample vs first sample (AA1)")
 plt.show()
 
 
 
-nmf = NMF(X, 3)
-W, H = nmf.fit(verbose=True)
-recon = np.matmul(W, H)
+# nmf = NMF(X, 3)
+# W, H = nmf.fit(verbose=True)
+# recon = np.matmul(W, H)
 
-for signal in H:
-    plt.plot(signal)
-plt.title("Found components NMF")
-plt.show()
+# for signal in H:
+#     plt.plot(signal)
+# plt.title("Found components NMF")
+# plt.show()
 
-plt.plot(recon[1])
-plt.plot(X[1])
-plt.title("Reconstruction of first sample vs first sample")
-plt.show()
+# plt.plot(recon[1])
+# plt.plot(X[1])
+# plt.title("Reconstruction of first sample vs first sample")
+# plt.show()
