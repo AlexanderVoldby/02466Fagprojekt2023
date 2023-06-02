@@ -2,7 +2,7 @@ import scipy.io
 import numpy as np
 from torchNMF import NMF
 from torchAA import torchAA
-from helpers.callbacks import explained_variance, ChangeStopper
+from helpers.callbacks import explained_variance, ChangeStopper, EarlyStop
 from sklearn import metrics
 import matplotlib.pyplot as plt
 
@@ -34,15 +34,15 @@ axis = mat.get("Axis")
 # plt.show()
 
 # Fit NMF and AA 10 times and get an average loss curve for each as well as an average explained variance
-max_components = 3
+max_components = 4
 aa_explained = []
 nmf_explained = []
 for i in range(max_components):
-    print(F"Components: {i+1}")
+    print(F"Components: {i+1}", end="\n")
     nmf = NMF(X, i+1)
     aa = torchAA(X, i+1)
-    nmf.fit(verbose=True)
-    aa.fit(verbose=True)
+    nmf.fit(verbose=True, stopper=EarlyStop())
+    aa.fit(verbose=True, stopper=EarlyStop())
     nmf_explained.append(explained_variance(X, nmf.forward().detach().numpy()))
     aa_explained.append(explained_variance(X, aa.forward().detach().numpy()))
 

@@ -54,8 +54,7 @@ class EarlyStop(Stopper):
         return self.counter > self.patience
 
 
-class RelativeStopper:
-
+class RelativeStopper(Stopper):
     def __init__(self, data, alpha=1e-6):
         self.norm = torch.linalg.matrix_norm(data, ord="fro").item()**2
         self.alpha = alpha
@@ -69,11 +68,14 @@ class RelativeStopper:
 
 
 # 
-class ChangeStopper:
-    def __init__(self, alpha=1e-8):
+class ChangeStopper(Stopper):
+    def __init__(self, alpha=1e-8, patience=5):
         self.alpha = alpha
         self.ploss = None
         self.loss = None
+        
+        self.patience = patience
+        self.counter = 0
 
     def track_loss(self, loss):
         if self.loss is None:
@@ -82,9 +84,16 @@ class ChangeStopper:
         else:
             self.ploss = self.loss
             self.loss = loss
+        
+        if self.ploss is not None:
+            if abs((self.ploss - self.loss)/self.ploss) < self.alpha:
+                self.counter += 1
+            else:
+                self.counter = 0
 
     def trigger(self):
-        if self.ploss is None:
-            return False
-        else:
-            return abs((self.ploss - self.loss)/self.ploss) < self.alpha
+        # if self.ploss is None:
+        #     return False
+        # else:
+        #     return abs((self.ploss - self.loss)/self.ploss) < self.alpha
+        return self.counter > self.patience

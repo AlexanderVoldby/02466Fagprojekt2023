@@ -59,7 +59,7 @@ class torchAA(torch.nn.Module):
 
             # print loss
             if verbose:
-                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}")
+                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}", end='\r')
 
         C = self.softmax(self.C)
         S = self.softmax(self.S)

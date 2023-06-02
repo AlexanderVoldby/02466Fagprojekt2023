@@ -47,7 +47,7 @@ class NMF(torch.nn.Module):
 
             # print loss
             if verbose:
-                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}")
+                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}", end='\r')
 
         W = self.softplus(self.W).detach().numpy()
         H = self.softplus(self.H).detach().numpy()
@@ -99,7 +99,7 @@ class MVR_NMF(torch.nn.Module):
 
             # print loss
             if verbose:
-                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}")
+                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}", end='\r')
 
         W = self.softmax(self.W).detach().numpy()
         H = self.softmax(self.H).detach().numpy()
