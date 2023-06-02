@@ -34,6 +34,7 @@ class ShiftNMF(torch.nn.Module):
 
     def forward(self):
         # Get half of the frequencies
+        # TODO: Sørg for at det virker for både lige og ulige data
         Nf = self.M // 2 + 1
         # Fourier transform of H along the second dimension
         Hf = torch.fft.fft(self.softplus(self.H), dim=1)
@@ -50,9 +51,8 @@ class ShiftNMF(torch.nn.Module):
         V = torch.einsum('NdM,dM->NM', Wf, Hft)
         return V
 
-    def fit(self, verbose=False):
-        # TODO: Make a method with relative error (loss / FrobeniusNorm(data))
-        stopper = ChangeStopper(alpha=1e-8)
+    def fit(self, verbose=False, return_loss=False):
+        stopper = ChangeStopper(alpha=1e-9)
         running_loss = []
         while not stopper.trigger():
             # zero optimizer gradient
@@ -79,7 +79,10 @@ class ShiftNMF(torch.nn.Module):
         H = self.softplus(self.H).detach().numpy()
         tau = self.tau.detach().numpy()
 
-        return W, H, tau
+        if return_loss:
+            return W, H, tau, running_loss
+        else:
+            return W, H, tau
 
 
 if __name__ == "__main__":

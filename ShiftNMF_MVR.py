@@ -38,7 +38,7 @@ class ShiftNMF(torch.nn.Module):
         # Get half of the frequencies
         Nf = self.M // 2 + 1
         # Fourier transform of H along the second dimension
-        Hf = torch.fft.fft(self.softmax(self.H), dim=1)
+        Hf = torch.fft.fft(self.softplus(self.H), dim=1)
         # Keep only the first Nf[1] elements of the Fourier transform of H
         Hf = Hf[:, :Nf]
         # Construct the shifted Fourier transform of H
@@ -63,7 +63,7 @@ class ShiftNMF(torch.nn.Module):
             output = self.forward()
 
             # backward
-            loss = self.lossfn(output, self.softmax(self.H))
+            loss = self.lossfn(output, self.softplus(self.H))
             loss.backward()
 
             # Update W, H and tau
@@ -77,7 +77,7 @@ class ShiftNMF(torch.nn.Module):
                 print(f"epoch: {len(running_loss)}, Loss: {loss.item()}")
 
         W = self.softmax(self.W).detach().numpy()
-        H = self.softmax(self.H).detach().numpy()
+        H = self.softplus(self.H).detach().numpy()
         tau = self.tau.detach().numpy()
 
         return W, H, tau

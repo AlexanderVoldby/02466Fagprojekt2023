@@ -38,7 +38,7 @@ def shift_dataset(W, H, tau):
 # Random mixings:
 W = np.random.rand(N, d)
 # Random gaussian shifts
-tau = np.random.randint(0, 1000, size=(N, d))
+tau = np.random.randint(-2000, 2000, size=(N, d))
 # Purely positive underlying signals. I define them as 3 gaussian peaks with random mean and std.
 mean = [40, 300, 700]
 std = [10, 20, 7]
@@ -59,14 +59,21 @@ plt.title("Dataset build from mixing and shifts of the three sources")
 plt.show()
 
 # Try to find real components with shiftNMF:
-# shiftnmf = ShiftNMF(X, 3)
-# W_, H_, tau_ = shiftnmf.fit(verbose=True)
-# # Plot the signals found by shiftNMF
-# plt.figure()
-# for signal in H_:
-#     plt.plot(signal)
-# plt.title("Signals determined by shiftNMF")
-# plt.show()
+shiftnmf_loss = []
+params = []
+iterations = 10
+for i in range(iterations):
+    shiftnmf = ShiftNMF(X, 3)
+    W_, H_, tau_, loss = shiftnmf.fit(verbose=True, return_loss=True)
+    shiftnmf_loss.append(loss[-1])
+    params.append((W_, H_, tau_))
+W_, H_, tau_ = params[np.argmin(shiftnmf_loss)]
+# Plot the signals found by shiftNMF
+plt.figure()
+for signal in H_:
+    plt.plot(signal)
+plt.title("Signals determined by shiftNMF")
+plt.show()
 
 # Then with regular NMF:
 nmf = NMF(X, 3)
