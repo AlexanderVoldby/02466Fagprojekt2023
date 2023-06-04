@@ -28,7 +28,7 @@ class ShiftNMF(torch.nn.Module):
         self.H = torch.nn.Parameter(torch.rand(rank, self.M, requires_grad=True))
         # TODO: Constrain tau by using tanh and multiplying with a max/min value
         # self.tau = torch.nn.Parameter(torch.tanh(torch.rand(self.N, self.rank) * 2000 - 1000), requires_grad=True)
-        self.tau = torch.nn.Parameter(torch.rand(self.N, self.rank)*2*self.shift_constraint-self.shift_constraint, requires_grad=True)
+        self.tau = torch.nn.Parameter(torch.rand(self.N, self.rank, requires_grad=True))
         self.optim = torch.optim.Adam(self.parameters(), lr=0.2)
 
     def forward(self):
@@ -43,9 +43,10 @@ class ShiftNMF(torch.nn.Module):
         
         # Broadcast Wf and H together
         V = torch.einsum('NdM,dM->NM', Wf, Hf)
+        self.recon = torch.fft.ifft(V)
         return V
 
-    def fit(self, verbose=False, stopper = ChangeStopper()):
+    def fit(self, verbose=False, stopper = ChangeStopper(alpha=1e-6)):
         running_loss = []
         while not stopper.trigger():
             # zero optimizer gradient
@@ -74,8 +75,8 @@ class ShiftNMF(torch.nn.Module):
 
         W = self.softplus(W).detach().numpy()
         H = self.softplus(H).detach().numpy()
-        tau = torch.tanh(tau.detach()).numpy() * self.shift_constraint
-        # tau = tau.detach().numpy()
+        #tau = torch.tanh(tau.detach()).numpy() * self.shift_constraint
+        tau = tau.detach().numpy()
 
         return W, H, tau
 
