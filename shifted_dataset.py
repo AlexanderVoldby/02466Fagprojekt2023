@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from ShiftNMF_half_frequencies import ShiftNMF
+import torch
 from helpers.callbacks import explained_variance
 from torchNMF import NMF, MVR_NMF
 np.random.seed(42069)
@@ -15,25 +16,26 @@ f = np.arange(-Fs/2, Fs/2, Fs/len(t))  # the corresponding frequency samples
 def gauss(mu, s, time):
     return 1/(s*np.sqrt(2*np.pi))*np.exp(-1/2*((time-mu)/s)**2)
 
-
 def shift_dataset(W, H, tau):
-    # Get half the frequencies
-    Nf = H.shape[1] // 2 + 1
-    # Fourier transform of S along the second dimension
-    Hf = np.fft.fft(H, axis=1)
-    # Keep only the first Nf[1] elements of the Fourier transform of S
+    M = H.shape[1]
+    W, H, tau = torch.Tensor(W), torch.Tensor(H), torch.Tensor(tau)
+    # Get half of the frequencies
+    Nf = M // 2 + 1
+    # Fourier transform of H along the second dimension
+    Hf = torch.fft.fft(H, dim=1)
+    # Keep only the first Nf elements of the Fourier transform of H
     Hf = Hf[:, :Nf]
-    # Construct the shifted Fourier transform of S
-    Hf_reverse = np.fliplr(Hf[:, 1:Nf - 1])
+    Hf_reverse = torch.flip(Hf[:, 1:Nf - 1], dims=[1])
     # Concatenate the original columns with the reversed columns along the second dimension
-    Hft = np.concatenate((Hf, np.conj(Hf_reverse)), axis=1)
-    f = np.arange(0, M) / M
-    omega = np.exp(-1j * 2 * np.pi * np.einsum('Nd,M->NdM', tau, f))
-    Wf = np.einsum('Nd,NdM->NdM', W, omega)
+    Hft = torch.cat((Hf, torch.conj(Hf_reverse)), dim=1)
+    # Construct the datamatrix by shifting and mixing
+    f = torch.arange(0, M) / M
+    omega = torch.exp(-1j * 2 * torch.pi * torch.einsum('Nd,M->NdM', tau, f))
+    Wf = torch.einsum('Nd,NdM->NdM', W, omega)
     # Broadcast Wf and H together
-    Vf = np.einsum('NdM,dM->NM', Wf, Hft)
-    V = np.fft.ifft(Vf)
-    return V
+    Vf = torch.einsum('NdM,dM->NM', Wf, Hft)
+    V = torch.fft.ifft(Vf)
+    return V.numpy()
 
 # Random mixings:
 W = np.random.rand(N, d)
@@ -41,9 +43,8 @@ W = np.random.rand(N, d)
 tau = np.random.randint(-2000, 2000, size=(N, d))
 # Purely positive underlying signals. I define them as 3 gaussian peaks with random mean and std.
 mean = [40, 300, 700]
-std = [10, 20, 7]
-t = np.arange(0, 1000, 0.1)
-H = np.array([gauss(m, s, t) for m, s in list(zip(mean, std))])
+std = [10, 20, 50]
+H = np.array([gauss(m, s, np.arange(0, 1000, 0.1)) for m, s in list(zip(mean, std))])
 plt.figure()
 for signal in H:
     plt.plot(signal)
