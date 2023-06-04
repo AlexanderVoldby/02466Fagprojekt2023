@@ -86,7 +86,7 @@ class ChangeStopper(Stopper):
             self.loss = loss
         
         if self.ploss is not None:
-            if abs((self.ploss - self.loss)/self.ploss) < self.alpha:
+            if abs((self.ploss - self.loss)/self.ploss) < self.alpha or self.ploss < self.loss:
                 self.counter += 1
             else:
                 self.counter = 0
