@@ -6,16 +6,17 @@ from helpers.losses import ShiftNMFLoss
 
 
 class torchShiftAA(torch.nn.Module):
-    def __init__(self, X, rank):
+    def __init__(self, X, rank, shift_constraint = 100):
         super(torchShiftAA, self).__init__()
 
+        self.shift_constraint = shift_constraint
         # Shape of Matrix for reproduction
         N, M = X.shape
         self.N, self.M = N, M
         self.X = torch.tensor(X)
 
         # softmax layer
-        self.softmax = torch.nn.Softmax(dim=0)
+        self.softmax = torch.nn.Softmax(dim=1)
         #self.softmax1 = torch.nn.Softmax(dim=1)
         self.softplus = torch.nn.Softplus()
 
@@ -26,21 +27,19 @@ class torchShiftAA(torch.nn.Module):
 
 
         # Initialization of Tensors/Matrices S and C with size Col x Rank and Rank x Col
-        # DxN (C) * NxM (X) =  DxM (CX)
-        # NxD (S) *  DxM (CX) = NxM (SCX)    
+        # DxN (C) * NxM (X) =  DxM (A)
+        # NxD (S) *  DxM (A) = NxM (SA)    
         
         self.C_tilde = torch.nn.Parameter(torch.rand(rank, N, requires_grad=True))
         self.S_tilde = torch.nn.Parameter(torch.rand(N, rank, requires_grad=True))
         self.tau_tilde = torch.nn.Parameter(torch.zeros(N, rank), requires_grad=True)
 
-        self.shift_constraint = 100
-
         self.C = lambda:self.softmax(self.C_tilde)
         self.S = lambda:self.softmax(self.S_tilde)
-        #self.tau = lambda:torch.tanh(self.tau_tilde)*self.shift_constraint
+        self.tau = lambda:torch.tanh(self.tau_tilde)*self.shift_constraint
 
-    def tau(self):
-        return torch.zeros(N, rank)
+    # def tau(self):
+    #     return torch.zeros(N, rank)
 
     def forward(self):
         # Implementation of shift AA.
@@ -55,7 +54,7 @@ class torchShiftAA(torch.nn.Module):
         #Aligned data (per component)
         X_F_align = torch.einsum('NM,NdM->NdM',X_F,omega_neg)
         X_align = torch.fft.ifft(X_F_align)
-        #The A matrix, (d,M) CX, in frequency domain
+        #The A matrix, (d,M) A, in frequency domain
         self.A = torch.einsum('dN,NdM->dM',self.C().double(), X_align.double())
         self.A_F = torch.fft.fft(self.A)
         #self.A_F = torch.einsum('dN,NdM->dM',self.C().double(), X_F_align.double())
@@ -63,16 +62,15 @@ class torchShiftAA(torch.nn.Module):
 
         # archetypes back shifted
         #A_shift = torch.einsum('dM,NdM->NdM', self.A_F.double(), omega.double())
-        S_F = torch.einsum('Nd,NdM->NdM', self.S(), omega) 
+        S_shift = torch.einsum('Nd,NdM->NdM', self.S(), omega) 
 
         # Reconstruction
-        self.recon = torch.einsum('NdM,dM->NM', S_F.double(), self.A_F.double())
-        x = self.recon
-        self.recon = torch.fft.ifft(self.recon)
+        x = torch.einsum('NdM,dM->NM', S_shift.double(), self.A_F.double())
+        self.recon = torch.fft.ifft(x)
         return x
 
-    def fit(self, verbose=False, return_loss=False, stopper = ChangeStopper()):
-        optimizer = Adam(self.parameters(), lr=0.8)
+    def fit(self, verbose=False, return_loss=False, stopper = ChangeStopper(alpha=1/1000)):
+        optimizer = Adam(self.parameters(), lr=0.4)
         scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5)
 
         # Convergence criteria
@@ -112,8 +110,6 @@ class torchShiftAA(torch.nn.Module):
         S = S.detach().numpy()
 
         return C, S, tau
-    
-
 
 if __name__ == "__main__":
     import numpy as np
@@ -130,26 +126,22 @@ if __name__ == "__main__":
     print("test")
     C,S, tau = AA.fit(verbose=True)
 
-    recon = AA.recon.detach().numpy()
+    recon = AA.recon.detach().resolve_conj().numpy()
     A = AA.A.detach().numpy()
 
-    CX = A
-    SCX = recon
+
     
     plt.figure()
-    for vec in CX:
-        plt.plot(vec)
+    for arc in A:
+        plt.plot(arc)
     plt.title("Archetypes")
     plt.show()
     plt.figure()
     plt.plot(X[1], label="First signal of X")
-    plt.plot(SCX[1], label="Reconstructed signal with shift AA")
+    plt.plot(recon[1], label="Reconstructed signal with shift AA")
     plt.legend()
     plt.show()
-    # plt.plot(X[2])
-    # plt.plot(SCX[2])
-    # plt.show()
-    
+
     plt.figure()
     plt.imshow(tau, aspect='auto', interpolation="none")
     ax = plt.gca()
