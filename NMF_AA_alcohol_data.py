@@ -2,9 +2,11 @@ import scipy.io
 import numpy as np
 from torchNMF import NMF
 from torchAA import torchAA
-from helpers.callbacks import explained_variance
+from helpers.callbacks import explained_variance, ChangeStopper, EarlyStop
 from sklearn import metrics
 import matplotlib.pyplot as plt
+
+from helpers.callbacks import EarlyStop
 
 # load data from .MAT file
 mat = scipy.io.loadmat('helpers/data/NMR_mix_DoE.mat')
@@ -50,7 +52,42 @@ plt.plot(np.arange(1, max_components+1), aa_explained, label="AA")
 plt.title("Explained variance per no. components used in factorization")
 plt.legend()
 plt.show()
+# plt.figure()
+# plt.plot(X[[np.all(x == [35, 35, 30]) for x in targets]][0])
+# plt.xlabel("Chemical shift [ppm]")
+# plt.title("NMR spectrum of 35% ethanol, 35% butanol and 30% pentanol")
+# plt.show()
 
+# Plot of the three pure components
+# fig, axs = plt.subplots(1, 3, sharey=True)
+# axs[0].plot(X[[np.all(x == [100, 0, 0]) for x in targets]][0], label="Propanol")
+# axs[0].set_title("Propanol")
+# axs[1].plot(X[[np.all(x == [0, 100, 0]) for x in targets]][0], label="Butanol")
+# axs[1].set_title("Butanol")
+# axs[2].plot(X[[np.all(x == [0, 0, 100]) for x in targets]][0], label="Pentanol")
+# axs[2].set_title("Pentanol")
+# plt.show()
+
+# Fit NMF and AA 10 times and get an average loss curve for each as well as an average explained variance
+max_components = 4
+aa_explained = []
+nmf_explained = []
+for i in range(max_components):
+    print(F"Components: {i+1}", end="\n")
+    nmf = NMF(X, i+1)
+    aa = torchAA(X, i+1)
+    nmf.fit(verbose=True, stopper=EarlyStop())
+    aa.fit(verbose=True, stopper=EarlyStop())
+    nmf_explained.append(explained_variance(X, nmf.forward().detach().numpy()))
+    aa_explained.append(explained_variance(X, aa.forward().detach().numpy()))
+
+plt.figure()
+plt.plot(np.arange(1, max_components+1), nmf_explained, label="NMF")
+plt.plot(np.arange(1, max_components+1), aa_explained, label="AA")
+plt.title("Explained variance per no. components used in factorization")
+plt.legend()
+plt.show()
+exit()
 n_iterations = 1
 nmf_W = np.empty(n_iterations, dtype=object)
 nmf_H = np.empty(n_iterations, dtype=object)

@@ -1,7 +1,7 @@
 import torch
 
 from helpers.data import X, X_clean
-from helpers.callbacks import earlyStop
+from helpers.callbacks import ChangeStopper
 from helpers.losses import ShiftNMFLoss
 import matplotlib.pyplot as plt
 
@@ -38,15 +38,16 @@ class ShiftNMF(torch.nn.Module):
         # Needs to be N x d x M
         f = torch.arange(0, self.M) / self.M
         omega = torch.exp(-1j*2 * torch.pi*torch.einsum('Nd,M->NdM', self.tau, f))
-        Wf = torch.einsum('Nd,NdM->NdM', self.softplus(self.W), omega)
+        Wf = torch.einsum('Nd,NdM->NdM', self.softplus(self.W), omega) 
+        #W is encoding, so we put on the shift of each component.
+        
         # Broadcast Wf and H together
         V = torch.einsum('NdM,dM->NM', Wf, Hf)
         return V
 
-    def fit(self, verbose=False):
-        es = earlyStop(patience=5, offset=-0.01)
+    def fit(self, verbose=False, stopper = ChangeStopper()):
         running_loss = []
-        while not es.trigger():
+        while not stopper.trigger():
             # zero optimizer gradient
             self.optim.zero_grad()
 
@@ -63,7 +64,7 @@ class ShiftNMF(torch.nn.Module):
             self.optim.step()
 
             running_loss.append(loss.item())
-            es.count(loss.item())
+            stopper.track_loss(loss.item())
 
             # print loss
             if verbose:

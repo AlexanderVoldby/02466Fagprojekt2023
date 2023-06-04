@@ -4,37 +4,37 @@ from helpers.callbacks import ChangeStopper
 from helpers.losses import frobeniusLoss
 
 
+
 class torchAA(torch.nn.Module):
     def __init__(self, X, rank):
         super(torchAA, self).__init__()
 
         # Shape of Matrix for reproduction
-        n_row, n_col = X.shape
+        N, M = X.shape
         self.X = torch.tensor(X)
 
         self.softmax = torch.nn.Softmax(dim=1)
         self.lossfn = frobeniusLoss(self.X)
         
-        self.C = torch.nn.Parameter(torch.rand(rank, n_row, requires_grad=True))
-        self.S = torch.nn.Parameter(torch.rand(n_row, rank, requires_grad=True))
+        self.C = torch.nn.Parameter(torch.rand(rank, N, requires_grad=True))
+        self.S = torch.nn.Parameter(torch.rand(N, rank, requires_grad=True))
 
 
     def forward(self):
 
         # first matrix Multiplication with softmax
-        CX = torch.matmul(self.softmax(self.C).double(), self.X)
+        CX = torch.matmul(self.softmax(self.C).double(), self.X.double())
 
         # Second matrix multiplication with softmax
-        SCX = torch.matmul(self.softmax(self.S).double(), CX)
+        SCX = torch.matmul(self.softmax(self.S).double(), CX.double())
 
         return SCX
 
-    def fit(self, verbose=False, return_loss=False):
+    def fit(self, verbose=False, return_loss=False, stopper = ChangeStopper()):
         optimizer = Adam(self.parameters(), lr=0.5)
         scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5)
 
         # Convergence criteria
-        stopper = ChangeStopper()
         running_loss = []
 
         while not stopper.trigger():
@@ -59,7 +59,7 @@ class torchAA(torch.nn.Module):
 
             # print loss
             if verbose:
-                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}")
+                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}", end='\r')
 
         C = self.softmax(self.C)
         S = self.softmax(self.S)

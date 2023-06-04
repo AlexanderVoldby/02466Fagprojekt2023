@@ -51,8 +51,7 @@ class ShiftNMF(torch.nn.Module):
         V = torch.einsum('NdM,dM->NM', Wf, Hft)
         return V
 
-    def fit(self, verbose=False, return_loss=False):
-        stopper = ChangeStopper(alpha=1e-6)
+    def fit(self, verbose=False, stopper = ChangeStopper(), return_loss=False):
         running_loss = []
         while not stopper.trigger():
             # zero optimizer gradient

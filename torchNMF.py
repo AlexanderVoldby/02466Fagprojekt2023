@@ -24,8 +24,7 @@ class NMF(torch.nn.Module):
         WH = torch.matmul(self.softplus(self.W), self.softplus(self.H))
         return WH
 
-    def fit(self, verbose=False, return_loss=False):
-        stopper = ChangeStopper()
+    def fit(self, verbose=False, return_loss=False,  stopper=ChangeStopper()):
         running_loss = []
         while not stopper.trigger():
             # zero optimizer gradient
@@ -48,7 +47,7 @@ class NMF(torch.nn.Module):
 
             # print loss
             if verbose:
-                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}")
+                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}", end='\r')
 
         W = self.softplus(self.W).detach().numpy()
         H = self.softplus(self.H).detach().numpy()
@@ -80,8 +79,7 @@ class MVR_NMF(torch.nn.Module):
         WH = torch.matmul(self.softmax(self.W), self.softplus(self.H))
         return WH
 
-    def fit(self, verbose=False, return_loss=False):
-        stopper = ChangeStopper()
+    def fit(self, verbose=False, return_loss=False, stopper = ChangeStopper()):
         running_loss = []
         while not stopper.trigger():
             # zero optimizer gradient
@@ -103,7 +101,7 @@ class MVR_NMF(torch.nn.Module):
 
             # print loss
             if verbose:
-                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}")
+                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}", end='\r')
 
         W = self.softmax(self.W).detach().numpy()
         H = self.softplus(self.H).detach().numpy()

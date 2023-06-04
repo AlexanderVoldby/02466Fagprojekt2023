@@ -18,12 +18,67 @@ def explained_variance(original_data, reconstructed_data):
     explained_variance = 1 - (numerator / denominator)
 
     return explained_variance
+<<<<<<< HEAD
+=======
 
-class ChangeStopper:
-    def __init__(self, alpha=1e-8):
+
+#Superclass for stopping criteria
+class Stopper:
+    def __init__(self) -> None:
+        pass
+
+    # Function for tracking loss - to be implemented in subclasses
+    def track_loss(self):
+        pass
+    
+    # Function for triggering stop - to be implemented in subclasses
+    def trigger(self):
+        pass
+
+
+class EarlyStop(Stopper):
+    def __init__(self, patience = 5, offset = 0) -> None:
+        self.patience = patience
+        
+        self.counter = 0
+        self.lowest = np.Inf
+        
+        self.offset = offset
+        
+    def track_loss(self, loss_val):
+        if loss_val < self.lowest + self.offset:
+            self.lowest = loss_val
+            self.counter = 0
+        else:
+            self.counter += 1
+            
+    def trigger(self):
+        return self.counter > self.patience
+
+
+class RelativeStopper(Stopper):
+    def __init__(self, data, alpha=1e-6):
+        self.norm = torch.linalg.matrix_norm(data, ord="fro").item()**2
+        self.alpha = alpha
+        self.loss = 1e9
+
+    def track_loss(self, loss):
+        self.loss = loss
+
+    def trigger(self):
+        return self.loss/self.norm < self.alpha
+
+>>>>>>> 3f45a62c574bdc9ea7df189ba2cb567f950093b5
+
+# 
+class ChangeStopper(Stopper):
+    def __init__(self, alpha=1e-8, patience=5):
         self.alpha = alpha
         self.ploss = None
         self.loss = None
+        
+        self.patience = patience
+        self.counter = 0
 
     def track_loss(self, loss):
         if self.loss is None:
@@ -32,9 +87,23 @@ class ChangeStopper:
         else:
             self.ploss = self.loss
             self.loss = loss
+        
+        if self.ploss is not None:
+            if abs((self.ploss - self.loss)/self.ploss) < self.alpha:
+                self.counter += 1
+            else:
+                self.counter = 0
 
     def trigger(self):
+<<<<<<< HEAD
         if self.ploss is None:
             return False
         else:
             return abs(self.ploss - self.loss)/abs(self.ploss) < self.alpha
+=======
+        # if self.ploss is None:
+        #     return False
+        # else:
+        #     return abs((self.ploss - self.loss)/self.ploss) < self.alpha
+        return self.counter > self.patience
+>>>>>>> 3f45a62c574bdc9ea7df189ba2cb567f950093b5

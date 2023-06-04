@@ -1,7 +1,7 @@
 import torch
 from torch.optim import Adam, lr_scheduler
 from helpers.data import X, X_clean
-from helpers.callbacks import RelativeStopper, ChangeStopper
+from helpers.callbacks import ChangeStopper
 from helpers.losses import ShiftNMFLoss, MVR_ShiftNMF_Loss
 import matplotlib.pyplot as plt
 
@@ -52,8 +52,7 @@ class ShiftNMF(torch.nn.Module):
         V = torch.einsum('NdM,dM->NM', Wf, Hft)
         return V
 
-    def fit(self, verbose=False):
-        stopper = ChangeStopper(alpha=1e-8)
+    def fit(self, verbose=False, stopper = ChangeStopper()):
         running_loss = []
         while not stopper.trigger():
             # zero optimizer gradient
