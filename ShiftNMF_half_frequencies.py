@@ -2,7 +2,7 @@ import torch
 from torch.optim import Adam, lr_scheduler
 from helpers.data import X, X_clean
 from helpers.callbacks import ChangeStopper
-from helpers.losses import ShiftNMFLoss
+from helpers.losses import frobeniusLoss
 import matplotlib.pyplot as plt
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -19,7 +19,7 @@ class ShiftNMF(torch.nn.Module):
         
         self.N, self.M = X.shape
         self.softplus = torch.nn.Softplus()
-        self.lossfn = ShiftNMFLoss(torch.fft.fft(self.X))
+        self.lossfn = frobeniusLoss(torch.fft.fft(self.X))
         
         # Initialization of Tensors/Matrices a and b with size NxR and RxM
         # Introduce regularization on W with min volume by making W have unit norm by dividing through
@@ -77,6 +77,9 @@ class ShiftNMF(torch.nn.Module):
         W = self.softplus(self.W).detach().numpy()
         H = self.softplus(self.H).detach().numpy()
         tau = self.tau.detach().numpy()
+
+        output = self.forward()
+        self.recon = torch.fft.ifft(output)
 
         return W, H, tau
 

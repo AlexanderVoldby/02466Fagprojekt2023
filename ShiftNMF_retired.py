@@ -2,14 +2,14 @@ import torch
 
 from helpers.data import X, X_clean
 from helpers.callbacks import ChangeStopper
-from helpers.losses import ShiftNMFLoss
+from helpers.losses import frobeniusLoss
 import matplotlib.pyplot as plt
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
 class ShiftNMF(torch.nn.Module):
-    def __init__(self, X, rank, shift_constraint = 5):
+    def __init__(self, X, rank, shift_constraint = 100):
         super().__init__()
 
         # Shape of Matrix for reproduction
@@ -19,7 +19,7 @@ class ShiftNMF(torch.nn.Module):
         
         self.N, self.M = X.shape
         self.softplus = torch.nn.Softplus()
-        self.lossfn = ShiftNMFLoss(self.X)
+        self.lossfn = frobeniusLoss(torch.fft.fft(self.X))
         
         # Initialization of Tensors/Matrices a and b with size NxR and RxM
         # Introduce regularization on W with min volume by making W have unit norm by dividing through
@@ -29,7 +29,7 @@ class ShiftNMF(torch.nn.Module):
         # TODO: Constrain tau by using tanh and multiplying with a max/min value
         # self.tau = torch.nn.Parameter(torch.tanh(torch.rand(self.N, self.rank) * 2000 - 1000), requires_grad=True)
         self.tau = torch.nn.Parameter(torch.rand(self.N, self.rank, requires_grad=True))
-        self.optim = torch.optim.Adam(self.parameters(), lr=0.2)
+        self.optim = torch.optim.Adam(self.parameters(), lr=0.4)
 
     def forward(self):
         # The underlying signals in the frequency space
@@ -43,10 +43,9 @@ class ShiftNMF(torch.nn.Module):
         
         # Broadcast Wf and H together
         V = torch.einsum('NdM,dM->NM', Wf, Hf)
-        self.recon = torch.fft.ifft(V)
         return V
 
-    def fit(self, verbose=False, stopper = ChangeStopper(alpha=1e-6)):
+    def fit(self, verbose=False, stopper = ChangeStopper()):
         running_loss = []
         while not stopper.trigger():
             # zero optimizer gradient
@@ -69,7 +68,7 @@ class ShiftNMF(torch.nn.Module):
 
             # print loss
             if verbose:
-                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}")
+                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}", end='\r')
 
         W, H, tau = list(self.parameters())
 
@@ -77,6 +76,9 @@ class ShiftNMF(torch.nn.Module):
         H = self.softplus(H).detach().numpy()
         #tau = torch.tanh(tau.detach()).numpy() * self.shift_constraint
         tau = tau.detach().numpy()
+
+        output = self.forward()
+        self.recon = torch.fft.ifft(output)
 
         return W, H, tau
 
