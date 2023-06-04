@@ -31,7 +31,7 @@ class torchAA(torch.nn.Module):
         return SCX
 
     def fit(self, verbose=False, return_loss=False, stopper = ChangeStopper()):
-        optimizer = Adam(self.parameters(), lr=0.5)
+        optimizer = Adam(self.parameters(), lr=0.2)
         scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5)
 
         # Convergence criteria

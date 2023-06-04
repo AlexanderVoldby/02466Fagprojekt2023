@@ -59,14 +59,14 @@ plt.title("Dataset build from mixing and shifts of the three sources")
 plt.show()
 
 # Try to find real components with shiftNMF:
-# shiftnmf = ShiftNMF(X, 3)
-# W_, H_, tau_ = shiftnmf.fit(verbose=True)
-# # Plot the signals found by shiftNMF
-# plt.figure()
-# for signal in H_:
-#     plt.plot(signal)
-# plt.title("Signals determined by shiftNMF")
-# plt.show()
+shiftnmf = ShiftNMF(X, 3)
+W_, H_, tau_ = shiftnmf.fit(verbose=True)
+# Plot the signals found by shiftNMF
+plt.figure()
+for signal in H_:
+    plt.plot(signal)
+plt.title("Signals determined by shiftNMF")
+plt.show()
 
 # Then with regular NMF:
 nmf = NMF(X, 3)
