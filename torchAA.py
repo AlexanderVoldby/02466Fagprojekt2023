@@ -13,7 +13,7 @@ class torchAA(torch.nn.Module):
         N, M = X.shape
         self.X = torch.tensor(X)
 
-        self.softmax = torch.nn.Softmax(dim=0)
+        self.softmax = torch.nn.Softmax(dim=1)
         self.lossfn = frobeniusLoss(self.X)
         
         self.C = torch.nn.Parameter(torch.rand(rank, N, requires_grad=True))
