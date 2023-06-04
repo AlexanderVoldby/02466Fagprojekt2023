@@ -5,11 +5,12 @@ import sys
 sys.path.append("../..")
 from helpers.callbacks import ChangeStopper
 from helpers.losses import frobeniusLoss
+from helpers.initializers import FurthestSum
 
 print("torchAA.py")
 
 class torchAA(torch.nn.Module):
-    def __init__(self, X, rank):
+    def __init__(self, X, rank, initializer = None, noc = 10, power = 1, initial = 0, exclude = []):
         super(torchAA, self).__init__()
 
         # Shape of Matrix for reproduction
@@ -19,7 +20,19 @@ class torchAA(torch.nn.Module):
         self.softmax = torch.nn.Softmax(dim=0)
         self.lossfn = frobeniusLoss(self.X)
         
-        self.C = torch.nn.Parameter(torch.rand(n_col, rank, requires_grad=True))
+        
+        if initializer is not None:
+            cols = FurthestSum(X, noc, initial, exclude)
+            self.C = torch.zeros(n_col, rank)
+            for i in cols:
+                self.C[i] = power
+                
+            self.C = torch.tensor(self.C, requires_grad=True)
+            self.C = torch.nn.Parameter(self.C)
+        else:
+            self.C = torch.nn.Parameter(torch.rand(n_col, rank, requires_grad=True))
+        # print(self.C)
+        
         self.S = torch.nn.Parameter(torch.rand(rank, n_col, requires_grad=True))
 
 
