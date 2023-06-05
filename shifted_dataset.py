@@ -75,17 +75,20 @@ recon_fourier = best_model.forward().detach().numpy()
 recon = np.fft.ifft(recon_fourier)
 plot_data(recon, "Dataset reconstructed by shiftNMF")
 
+shiftnmf = ShiftNMF(X, 3)
+W_, H_, tau_ = shiftnmf.fit(verbose=True)
+# Plot the signals found by shiftNMF
+plt.figure()
+for signal in H_:
+    plt.plot(signal)
+plt.title("Signals determined by shiftNMF")
+plt.show()
+
 # Then with regular NMF:
 nmf = NMF(X, 3)
 Wnmf, Hnmf = nmf.fit(verbose=True)
 recon_nmf = nmf.forward().detach().numpy()
 
-plt.figure()
-for signal in Hnmf:
-    plt.plot(signal)
-plt.title("Signals determined by NMF")
-plt.show()
+plot_data(Hnmf, "Signals determined by NMF")
+plot_data(recon, "Reconstruction by NMF")
 
-plt.figure()
-for signal in recon_nmf:
-    plt.plot(signal)

@@ -17,7 +17,7 @@ class NMF(torch.nn.Module):
         self.W = torch.nn.Parameter(torch.rand(n_row, rank, requires_grad=True))
         self.H = torch.nn.Parameter(torch.rand(rank, n_col, requires_grad=True))
 
-        self.optim = Adam(self.parameters(), lr=0.5)
+        self.optim = Adam(self.parameters(), lr=0.4)
         self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optim, mode='min', factor=0.1, patience=5)
 
     def forward(self):
