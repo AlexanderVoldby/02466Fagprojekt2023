@@ -18,9 +18,6 @@ def explained_variance(original_data, reconstructed_data):
     explained_variance = 1 - (numerator / denominator)
 
     return explained_variance
-<<<<<<< HEAD
-=======
-
 
 #Superclass for stopping criteria
 class Stopper:
@@ -68,7 +65,6 @@ class RelativeStopper(Stopper):
     def trigger(self):
         return self.loss/self.norm < self.alpha
 
->>>>>>> 3f45a62c574bdc9ea7df189ba2cb567f950093b5
 
 # 
 class ChangeStopper(Stopper):
@@ -95,15 +91,7 @@ class ChangeStopper(Stopper):
                 self.counter = 0
 
     def trigger(self):
-<<<<<<< HEAD
         if self.ploss is None:
             return False
         else:
             return abs(self.ploss - self.loss)/abs(self.ploss) < self.alpha
-=======
-        # if self.ploss is None:
-        #     return False
-        # else:
-        #     return abs((self.ploss - self.loss)/self.ploss) < self.alpha
-        return self.counter > self.patience
->>>>>>> 3f45a62c574bdc9ea7df189ba2cb567f950093b5
