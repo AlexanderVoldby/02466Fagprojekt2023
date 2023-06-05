@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from ShiftNMF_half_frequencies import ShiftNMF
 import torch
 from helpers.callbacks import explained_variance
+from helpers.callbacks import ChangeStopper
 from torchNMF import NMF, MVR_NMF
 np.random.seed(42069)
 
@@ -63,6 +64,7 @@ shiftnmf_loss = []
 models = []
 iterations = 10
 for i in range(iterations):
+    print("Iteration: ", i)
     shiftnmf = ShiftNMF(X, 3)
     W_, H_, tau_, loss = shiftnmf.fit(verbose=True, return_loss=True)
     shiftnmf_loss.append(loss[-1])
