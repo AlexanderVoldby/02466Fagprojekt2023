@@ -23,7 +23,7 @@ def explained_variance(original_data, reconstructed_data):
 class Stopper:
     def __init__(self) -> None:
         pass
-
+    
     # Function for tracking loss - to be implemented in subclasses
     def track_loss(self):
         pass
@@ -32,7 +32,11 @@ class Stopper:
     def trigger(self):
         pass
 
-
+    # Function for resetting stopper - to be implemented in subclasses
+    def reset(self):
+        pass
+    
+    
 class EarlyStop(Stopper):
     def __init__(self, patience = 5, offset = 0) -> None:
         self.patience = patience
@@ -51,6 +55,10 @@ class EarlyStop(Stopper):
             
     def trigger(self):
         return self.counter > self.patience
+    
+    def reset(self):
+        self.counter = 0
+        self.lowest = np.Inf
 
 
 class RelativeStopper(Stopper):
@@ -64,6 +72,9 @@ class RelativeStopper(Stopper):
 
     def trigger(self):
         return self.loss/self.norm < self.alpha
+
+    def reset(self):
+        self.loss = 1e9
 
 
 # 
@@ -95,3 +106,8 @@ class ChangeStopper(Stopper):
             return False
         else:
             return abs(self.ploss - self.loss)/abs(self.ploss) < self.alpha
+
+    def reset(self):
+        self.ploss = None
+        self.loss = None
+        self.counter = 0

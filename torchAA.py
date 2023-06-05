@@ -31,6 +31,7 @@ class torchAA(torch.nn.Module):
         return SCX
 
     def fit(self, verbose=False, return_loss=False, stopper = ChangeStopper()):
+        stopper.reset()
         optimizer = Adam(self.parameters(), lr=0.5)
         scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5)
 

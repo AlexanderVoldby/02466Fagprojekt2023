@@ -25,6 +25,8 @@ class NMF(torch.nn.Module):
         return WH
 
     def fit(self, verbose=False, return_loss=False,  stopper=ChangeStopper()):
+        
+        stopper.reset()
         running_loss = []
         while not stopper.trigger():
             # zero optimizer gradient

@@ -70,6 +70,7 @@ class torchShiftAA(torch.nn.Module):
         return x
 
     def fit(self, verbose=False, return_loss=False, stopper = ChangeStopper(alpha=1/1000)):
+        stopper.reset()
         optimizer = Adam(self.parameters(), lr=0.4)
         scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5)
 
