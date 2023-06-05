@@ -2,8 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from ShiftNMF_half_frequencies import ShiftNMF
 import torch
-from helpers.callbacks import explained_variance
-from helpers.callbacks import ChangeStopper
+from helpers.callbacks import explained_variance, ChangeStopper
 from torchNMF import NMF, MVR_NMF
 np.random.seed(42069)
 
@@ -30,10 +29,8 @@ def shift_dataset(W, H, tau):
     # Get half of the frequencies
     Nf = M // 2 + 1
     # Fourier transform of H along the second dimension
-    Hf = torch.fft.fft(H, dim=1)
-    # Keep only the first Nf elements of the Fourier transform of H
-    Hf = Hf[:, :Nf]
-    Hf_reverse = torch.flip(Hf[:, 1:Nf - 1], dims=[1])
+    Hf = torch.fft.fft(H, dim=1)[:, :Nf] # Keep only the first Nf elements of the Fourier transform of H
+    Hf_reverse = torch.flip(Hf[:, 1: Nf - 1], dims=[1])
     # Concatenate the original columns with the reversed columns along the second dimension
     Hft = torch.cat((Hf, torch.conj(Hf_reverse)), dim=1)
     # Construct the datamatrix by shifting and mixing
@@ -61,30 +58,19 @@ plot_data(X, "Dataset build from mixing and shifts of the three sources")
 
 # Try to find real components with shiftNMF:
 shiftnmf_loss = []
-models = []
-iterations = 10
+iterations = 1
+models = [ShiftNMF(X, 3, alpha=1e-9) for i in range(iterations)]
+params = []
 for i in range(iterations):
-    print("Iteration: ", i)
-    shiftnmf = ShiftNMF(X, 3)
-    W_, H_, tau_, loss = shiftnmf.fit(verbose=True, return_loss=True)
+    W_, H_, tau_, loss = models[i].fit(verbose=True, return_loss=True)
     shiftnmf_loss.append(loss[-1])
-    models.append(shiftnmf)
+    params.append((W_, H_, tau_))
 best_model = models[np.argmin(shiftnmf_loss)]
+best_W, best_H, best_tau = params[np.argmin(shiftnmf_loss)]
 
-plot_data(best_model.H.detach().numpy(), "Signals determined by shiftNMF")
+plot_data(best_H, "Signals determined by shiftNMF")
+plot_data(best_model.recon.detach().numpy(), "Dataset reconstructed by shiftNMF")
 
-recon_fourier = best_model.forward().detach().numpy()
-recon = np.fft.ifft(recon_fourier)
-plot_data(recon, "Dataset reconstructed by shiftNMF")
-
-shiftnmf = ShiftNMF(X, 3)
-W_, H_, tau_ = shiftnmf.fit(verbose=True)
-# Plot the signals found by shiftNMF
-plt.figure()
-for signal in H_:
-    plt.plot(signal)
-plt.title("Signals determined by shiftNMF")
-plt.show()
 
 # Then with regular NMF:
 nmf = NMF(X, 3)
@@ -92,5 +78,5 @@ Wnmf, Hnmf = nmf.fit(verbose=True)
 recon_nmf = nmf.forward().detach().numpy()
 
 plot_data(Hnmf, "Signals determined by NMF")
-plot_data(recon, "Reconstruction by NMF")
+plot_data(recon_nmf, "Reconstruction by NMF")
 
