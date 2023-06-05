@@ -58,7 +58,7 @@ plot_data(X, "Dataset build from mixing and shifts of the three sources")
 
 # Try to find real components with shiftNMF:
 shiftnmf_loss = []
-iterations = 1
+iterations = 5
 models = [ShiftNMF(X, 3, alpha=1e-9) for i in range(iterations)]
 params = []
 for i in range(iterations):

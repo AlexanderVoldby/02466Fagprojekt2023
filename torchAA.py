@@ -6,7 +6,7 @@ from helpers.losses import frobeniusLoss
 
 
 class torchAA(torch.nn.Module):
-    def __init__(self, X, rank):
+    def __init__(self, X, rank, alpha=1e-9):
         super(torchAA, self).__init__()
 
         # Shape of Matrix for reproduction
@@ -18,6 +18,7 @@ class torchAA(torch.nn.Module):
         
         self.C = torch.nn.Parameter(torch.rand(rank, N, requires_grad=True))
         self.S = torch.nn.Parameter(torch.rand(N, rank, requires_grad=True))
+        self.stopper = ChangeStopper(alpha=alpha)
 
 
     def forward(self):
@@ -30,14 +31,14 @@ class torchAA(torch.nn.Module):
 
         return SCX
 
-    def fit(self, verbose=False, return_loss=False, stopper = ChangeStopper()):
+    def fit(self, verbose=False, return_loss=False):
         optimizer = Adam(self.parameters(), lr=0.5)
         scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5)
 
         # Convergence criteria
         running_loss = []
 
-        while not stopper.trigger():
+        while not self.stopper.trigger():
             # zero optimizer gradient
             optimizer.zero_grad()
 
@@ -55,7 +56,7 @@ class torchAA(torch.nn.Module):
             running_loss.append(loss.item())
 
             # count with early stopping
-            stopper.track_loss(loss)
+            self.stopper.track_loss(loss)
 
             # print loss
             if verbose:

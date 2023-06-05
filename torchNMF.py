@@ -6,12 +6,13 @@ from helpers.data import X_clean
 import matplotlib.pyplot as plt
 
 class NMF(torch.nn.Module):
-    def __init__(self, X, rank):
+    def __init__(self, X, rank, alpha=1e-9):
         super().__init__()
 
         n_row, n_col = X.shape
         self.softplus = torch.nn.Softplus()
         self.lossfn = frobeniusLoss(torch.tensor(X))
+        self.stopper = ChangeStopper(alpha=alpha)
 
         # Initialization of Tensors/Matrices a and b with size NxR and RxM
         self.W = torch.nn.Parameter(torch.rand(n_row, rank, requires_grad=True))
@@ -79,9 +80,9 @@ class MVR_NMF(torch.nn.Module):
         WH = torch.matmul(self.softmax(self.W), self.softplus(self.H))
         return WH
 
-    def fit(self, verbose=False, return_loss=False, stopper = ChangeStopper()):
+    def fit(self, verbose=False, return_loss=False):
         running_loss = []
-        while not stopper.trigger():
+        while not self.stopper.trigger():
             # zero optimizer gradient
             self.optim.zero_grad()
 
@@ -97,7 +98,7 @@ class MVR_NMF(torch.nn.Module):
             self.scheduler.step(loss)
 
             running_loss.append(loss.item())
-            stopper.track_loss(loss)
+            self.stopper.track_loss(loss)
 
             # print loss
             if verbose:

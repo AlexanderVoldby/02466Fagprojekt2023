@@ -3,7 +3,7 @@ import torch
 #Defining frobenius Loss
 class frobeniusLoss(torch.nn.Module):
     def __init__(self, x: torch.tensor):
-        super(frobeniusLoss, self).__init__()
+        super().__init__()
         self.X = x
     
     def forward(self, input):
