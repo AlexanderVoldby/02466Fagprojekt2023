@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.matlib import repmat
 
 def FurthestSum(K, noc, i, exclude=[]):
     """
@@ -45,7 +46,10 @@ def FurthestSum(K, noc, i, exclude=[]):
         if I != J or np.sum(K - K.conj().T) != 0:
             Kt = K.copy()
             K = Kt.conj().T @ Kt
-            K = np.sqrt(np.tile(np.diag(K).conj().T, (J, 1)) - 2*K + np.tile(np.diag(K), (1, J)))
+            K = np.lib.scimath.sqrt(
+                repmat(np.diag(K), J, 1) - 2 * K + \
+                repmat(np.mat(np.diag(K)).T, 1, J)
+            )
         Kt2 = np.diag(K).conj().T
         for k in range(noc + 10):
             if k > noc - 1:
