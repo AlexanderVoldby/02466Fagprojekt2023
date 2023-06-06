@@ -12,7 +12,7 @@ class torchAA(torch.nn.Module):
 
         # Shape of Matrix for reproduction
         N, M = X.shape
-        self.X = torch.tensor(X)
+        self.X = torch.tensor(X, dtype=torch.double)
 
         self.softmax = torch.nn.Softmax(dim=1)
         self.lossfn = frobeniusLoss(self.X)
@@ -27,26 +27,26 @@ class torchAA(torch.nn.Module):
             for i in cols:
                 self.C[i] = power
             self.C = self.C.T
-            self.C = torch.tensor(self.C, requires_grad=True)
+            self.C = torch.tensor(self.C, requires_grad=True, dtype=torch.double)
             self.C = torch.nn.Parameter(self.C)
         else:
-            self.C = torch.nn.Parameter(torch.rand(rank, N, requires_grad=True))
-        self.S = torch.nn.Parameter(torch.rand(N, rank, requires_grad=True))
+            self.C = torch.nn.Parameter(torch.rand(rank, N, requires_grad=True, dtype=torch.double))
+        self.S = torch.nn.Parameter(torch.rand(N, rank, requires_grad=True, dtype=torch.double))
 
 
     def forward(self):
 
         # first matrix Multiplication with softmax
-        CX = torch.matmul(self.softmax(self.C).double(), self.X.double())
+        CX = torch.matmul(self.softmax(self.C), self.X)
 
         # Second matrix multiplication with softmax
-        SCX = torch.matmul(self.softmax(self.S).double(), CX.double())
+        SCX = torch.matmul(self.softmax(self.S), CX)
 
         return SCX
 
-    def fit(self, verbose=False, return_loss=False, stopper = ChangeStopper()):
+    def fit(self, verbose=False, return_loss=False, stopper = ChangeStopper(patience=5)):
         stopper.reset()
-        optimizer = Adam(self.parameters(), lr=0.4)
+        optimizer = Adam(self.parameters(), lr=0.3)
         scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5)
 
         # Convergence criteria
