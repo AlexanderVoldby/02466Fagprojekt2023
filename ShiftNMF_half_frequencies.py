@@ -2,34 +2,36 @@ import torch
 from torch.optim import Adam, lr_scheduler
 from helpers.data import X, X_clean
 from helpers.callbacks import ChangeStopper
-from helpers.losses import frobeniusLoss
+from helpers.losses import ShiftNMFLoss
 import matplotlib.pyplot as plt
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
 class ShiftNMF(torch.nn.Module):
-    def __init__(self, X, rank, shift_constraint = 5):
+    def __init__(self, X, rank, alpha=1e-8, shift_init = 5000):
         super().__init__()
 
         # Shape of Matrix for reproduction
         self.rank = rank
         self.X = torch.tensor(X)
-        self.shift_constraint = shift_constraint
+        self.shift_init = shift_init
         
         self.N, self.M = X.shape
         self.softplus = torch.nn.Softplus()
-        self.lossfn = frobeniusLoss(torch.fft.fft(self.X))
+        self.lossfn = ShiftNMFLoss(torch.fft.fft(self.X))
+        self.stopper = ChangeStopper(alpha=alpha)
         
         # Initialization of Tensors/Matrices a and b with size NxR and RxM
         # Introduce regularization on W with min volume by making W have unit norm by dividing through
         # with the norm of W
         self.W = torch.nn.Parameter(torch.rand(self.N, rank, requires_grad=True))
         self.H = torch.nn.Parameter(torch.rand(rank, self.M, requires_grad=True))
-        # TODO: Constrain tau by using tanh and multiplying with a max/min value
-        # self.tau = torch.nn.Parameter(torch.tanh(torch.rand(self.N, self.rank) * 2000 - 1000), requires_grad=True)
-        self.tau = torch.nn.Parameter(torch.rand(self.N, self.rank), requires_grad=True)
-        self.optim = Adam(self.parameters(), lr=0.2)
+        # Init tau between -1 and 1
+        self.tau = torch.nn.Parameter(-2*self.shift_init * torch.rand(self.N, self.rank)+self.shift_init, requires_grad=True)
+        # Tau is then cast to [-shift_constraint, shift_constraint]
+        # self.tau = lambda: torch.tanh(self.tau_tilde) * self.shift_constraint
+        self.optim = Adam(self.parameters(), lr=0.3)
         self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optim, mode='min', factor=0.1, patience=5)
 
     def forward(self):
@@ -45,16 +47,15 @@ class ShiftNMF(torch.nn.Module):
         # Concatenate the original columns with the reversed columns along the second dimension
         Hft = torch.cat((Hf, torch.conj(Hf_reverse)), dim=1)
         f = torch.arange(0, self.M) / self.M
-        omega = torch.exp(-1j*2 * torch.pi * torch.einsum('Nd,M->NdM', self.tau, f))
+        omega = torch.exp(-1j * 2 * torch.pi * torch.einsum('Nd,M->NdM', self.tau, f))
         Wf = torch.einsum('Nd,NdM->NdM', self.softplus(self.W), omega)
         # Broadcast Wf and H together
         V = torch.einsum('NdM,dM->NM', Wf, Hft)
         return V
 
-    def fit(self, verbose=False, return_loss=False, stopper=ChangeStopper()):
-        stopper.reset()
+    def fit(self, verbose=False, return_loss=False):
         running_loss = []
-        while not stopper.trigger():
+        while not self.stopper.trigger():
             # zero optimizer gradient
             self.optim.zero_grad()
 
@@ -69,7 +70,7 @@ class ShiftNMF(torch.nn.Module):
             self.optim.step()
             self.scheduler.step(loss)
             running_loss.append(loss.item())
-            stopper.track_loss(loss)
+            self.stopper.track_loss(loss)
 
             # print loss
             if verbose:
@@ -89,7 +90,7 @@ class ShiftNMF(torch.nn.Module):
 
 
 if __name__ == "__main__":
-    nmf = ShiftNMF(X_clean, 4, shift_constraint=5)
+    nmf = ShiftNMF(X_clean, 4, shift_init=5)
     nmf.to(device)
     W, H, tau = nmf.fit(verbose=True)
 
