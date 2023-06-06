@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from ShiftNMF_half_frequencies import ShiftNMF
 import torch
-from helpers.callbacks import explained_variance, ChangeStopper
+from helpers.callbacks import explained_variance, ChangeStopper, plot_data
 from torchNMF import NMF, MVR_NMF
 np.random.seed(42069)
 
@@ -12,13 +12,6 @@ Fs = 1000  # The sampling frequency we use for the simulation
 t0 = 10     # The half-time interval we look at
 t = np.arange(-t0, t0, 1/Fs)  # the time samples
 f = np.arange(-Fs/2, Fs/2, Fs/len(t))  # the corresponding frequency samples
-
-def plot_data(X, title=""):
-    plt.figure()
-    for signal in X:
-        plt.plot(signal)
-    plt.title(title)
-    plt.show()
 
 def gauss(mu, s, time):
     return 1/(s*np.sqrt(2*np.pi))*np.exp(-1/2*((time-mu)/s)**2)

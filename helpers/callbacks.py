@@ -1,5 +1,12 @@
 import numpy as np
-import torch.linalg
+import matplotlib.pyplot as plt
+
+def plot_data(X, title=""):
+    plt.figure()
+    for signal in X:
+        plt.plot(signal)
+    plt.title(title)
+    plt.show()
 
 
 def explained_variance(original_data, reconstructed_data):
