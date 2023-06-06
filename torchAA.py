@@ -2,6 +2,7 @@ import torch
 from torch.optim import Adam, lr_scheduler
 from helpers.callbacks import ChangeStopper
 from helpers.losses import frobeniusLoss
+from helpers.initializers import FurthestSum
 
 
 
@@ -15,10 +16,25 @@ class torchAA(torch.nn.Module):
 
         self.softmax = torch.nn.Softmax(dim=1)
         self.lossfn = frobeniusLoss(self.X)
-        
-        self.C = torch.nn.Parameter(torch.rand(rank, N, requires_grad=True))
+        Furthest = True
+        if Furthest == True:
+            noc = 10
+            power = 1
+            initial = 0
+            exclude = []
+            cols = FurthestSum(X.T, noc, initial, exclude)
+            self.C = torch.zeros(N, rank)
+            for i in cols:
+                self.C[i] = power
+            self.C = self.C.T
+            self.C = torch.tensor(self.C, requires_grad=True)
+            self.C = torch.nn.Parameter(self.C)
+        else:
+            self.C = torch.nn.Parameter(torch.rand(rank, N, requires_grad=True))
         self.S = torch.nn.Parameter(torch.rand(N, rank, requires_grad=True))
+        self.optimizer = Adam(self.parameters(), lr=0.5)
         self.stopper = ChangeStopper(alpha=alpha)
+        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=5)
 
 
     def forward(self):
@@ -32,15 +48,13 @@ class torchAA(torch.nn.Module):
         return SCX
 
     def fit(self, verbose=False, return_loss=False):
-        optimizer = Adam(self.parameters(), lr=0.5)
-        scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5)
 
         # Convergence criteria
         running_loss = []
 
         while not self.stopper.trigger():
             # zero optimizer gradient
-            optimizer.zero_grad()
+            self.optimizer.zero_grad()
 
             # forward
             output = self.forward()
@@ -50,8 +64,8 @@ class torchAA(torch.nn.Module):
             loss.backward()
 
             # Update A and B
-            optimizer.step()
-            scheduler.step(loss)
+            self.optimizer.step()
+            self.scheduler.step(loss)
             # append loss for graphing
             running_loss.append(loss.item())
 

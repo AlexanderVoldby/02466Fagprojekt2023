@@ -82,9 +82,9 @@ alcohols = np.array([X[[np.all(x == label) for x in targets]][0] for label in la
 alcohols_normalized = (alcohols - np.mean(alcohols, axis=0))/np.std(alcohols, axis=0)
 H_norm = (H-np.mean(H, axis=0))/np.std(H, axis=0)
 ac_norm = (aa_components-np.mean(aa_components, axis=0))/np.std(aa_components, axis=0)
-NMF_comp_labels = [target_labels[np.argmin(np.sum(np.square(alcohols_normalized-component)), axis=1)]
+NMF_comp_labels = [target_labels[np.argmin(np.sum(np.square(alcohols_normalized-component), axis=1))]
                    for component in H_norm]
-AA_comp_labels = [target_labels[np.argmin(np.sum(np.square(alcohols_normalized-component)), axis=1)]
+AA_comp_labels = [target_labels[np.argmin(np.sum(np.square(alcohols_normalized-component), axis=1))]
                   for component in ac_norm]
 
 
