@@ -17,7 +17,7 @@ class torchAA(torch.nn.Module):
         self.softmax = torch.nn.Softmax(dim=1)
         self.lossfn = frobeniusLoss(self.X)
         Furthest = True
-        if Furthest == True:
+        if Furthest:
             noc = 10
             power = 1
             initial = 0
@@ -27,7 +27,7 @@ class torchAA(torch.nn.Module):
             for i in cols:
                 self.C[i] = power
             self.C = self.C.T
-            self.C = torch.tensor(self.C, requires_grad=True)
+            self.C = self.C.clone().requires_grad_(True)
             self.C = torch.nn.Parameter(self.C)
         else:
             self.C = torch.nn.Parameter(torch.rand(rank, N, requires_grad=True))
