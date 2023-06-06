@@ -31,6 +31,10 @@ class Stopper:
     # Function for triggering stop - to be implemented in subclasses
     def trigger(self):
         pass
+    
+    # Function for resetting stopper - to be implemented in subclasses
+    def reset(self):
+        pass
 
 
 class EarlyStop(Stopper):
@@ -64,6 +68,9 @@ class RelativeStopper(Stopper):
 
     def trigger(self):
         return self.loss/self.norm < self.alpha
+    
+    def reset(self):
+        self.loss = 1e9
 
 
 # 
@@ -95,3 +102,8 @@ class ChangeStopper(Stopper):
             return False
         else:
             return abs(self.ploss - self.loss)/abs(self.ploss) < self.alpha
+
+    def reset(self):
+        self.ploss = None
+        self.loss = None
+        self.counter = 0
