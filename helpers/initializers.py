@@ -29,7 +29,7 @@ def FurthestSum(K, noc, i, exclude=[]):
         Kt = K.copy()
         Kt2 = np.sum(Kt**2, axis=0)
         for k in range(noc + 10):
-            if k > noc - 1:
+            if k > noc - 1: #remove initial seed
                 Kq = Kt[:, i[0]].conj().T @ Kt
                 sum_dist = sum_dist - np.emath.sqrt(Kt2 - 2*Kq + Kt2[i[0]])
                 index[i[0]] = True
