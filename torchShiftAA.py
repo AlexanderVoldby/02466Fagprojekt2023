@@ -29,13 +29,15 @@ class torchShiftAA(torch.nn.Module):
         # DxN (C) * NxM (X) =  DxM (A)
         # NxD (S) *  DxM (A) = NxM (SA)    
         
-        self.C_tilde = torch.nn.Parameter(torch.rand(rank, N, requires_grad=True))
-        self.S_tilde = torch.nn.Parameter(torch.rand(N, rank, requires_grad=True))
+        self.C_tilde = torch.nn.Parameter(torch.rand(rank, N, requires_grad=True,dtype=torch.double))
+        self.S_tilde = torch.nn.Parameter(torch.rand(N, rank, requires_grad=True, dtype=torch.double))
         self.tau_tilde = torch.nn.Parameter(torch.zeros(N, rank), requires_grad=True)
 
-        self.C = lambda:self.softmax(self.C_tilde)
-        self.S = lambda:self.softmax(self.S_tilde)
-        self.tau = lambda:torch.tanh(self.tau_tilde)*self.shift_constraint
+        self.C = lambda:self.softmax(self.C_tilde).type(torch.cdouble)
+        self.S = lambda:self.softmax(self.S_tilde).type(torch.cdouble)
+        #self.tau = lambda:torch.tanh(self.tau_tilde)*self.shift_constraint
+        self.tau = lambda: torch.round(self.tau_tilde)
+        #self.tau = lambda: self.tau_tilde
 
     # def tau(self):
     #     return torch.zeros(N, rank)
@@ -53,11 +55,11 @@ class torchShiftAA(torch.nn.Module):
 
         #Aligned data (per component)
         X_F_align = torch.einsum('NM,NdM->NdM',X_F, omega_neg)
-        X_align = torch.fft.ifft(X_F_align)
+        #X_align = torch.fft.ifft(X_F_align)
         #The A matrix, (d,M) A, in frequency domain
-        self.A = torch.einsum('dN,NdM->dM', self.C().double(), X_align.double())
-        A_F = torch.fft.fft(self.A)
-        #self.A_F = torch.einsum('dN,NdM->dM',self.C().double(), X_F_align.double())
+        #self.A = torch.einsum('dN,NdM->dM', self.C(), X_align)
+        #A_F = torch.fft.fft(self.A)
+        self.A_F = torch.einsum('dN,NdM->dM',self.C(), X_F_align)
         #S_F = torch.einsum('Nd,NdM->NdM', self.S().double(), omega)
 
         # archetypes back shifted
@@ -65,7 +67,7 @@ class torchShiftAA(torch.nn.Module):
         S_shift = torch.einsum('Nd,NdM->NdM', self.S(), omega) 
 
         # Reconstruction
-        x = torch.einsum('NdM,dM->NM', S_shift.double(), A_F.double())
+        x = torch.einsum('NdM,dM->NM', S_shift, self.A_F)
         self.recon = torch.fft.ifft(x)
         return x
 
@@ -98,7 +100,7 @@ class torchShiftAA(torch.nn.Module):
 
             # print loss
             if verbose:
-                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}")
+                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}", end="\r")
 
         C = self.softmax(self.C_tilde)
         S = self.softmax(self.S_tilde)
@@ -125,22 +127,22 @@ if __name__ == "__main__":
     C,S, tau = AA.fit(verbose=True)
 
     recon = AA.recon.detach().resolve_conj().numpy()
-    A = AA.A.detach().numpy()
+    A = torch.fft.ifft(AA.A_F).detach().numpy()
 
-    # For visualizing the aligned data
-    X_torch = torch.Tensor(X)
-    f = torch.arange(0, M) / M
-    omega = torch.exp(-1j * 2 * torch.pi * torch.einsum('Nd,M->NdM', AA.tau(), f))
-    omega_neg = torch.conj(omega)
-    X_F = torch.fft.fft(X_torch)
-    X_F_align = torch.einsum('NM,NdM->NdM', X_F, omega_neg)
-    X_align = torch.fft.ifft(X_F_align).detach().numpy()
+    # # For visualizing the aligned data
+    # X_torch = torch.Tensor(X)
+    # f = torch.arange(0, M) / M
+    # omega = torch.exp(-1j * 2 * torch.pi * torch.einsum('Nd,M->NdM', AA.tau(), f))
+    # omega_neg = torch.conj(omega)
+    # X_F = torch.fft.fft(X_torch)
+    # X_F_align = torch.einsum('NM,NdM->NdM', X_F, omega_neg)
+    # X_align = torch.fft.ifft(X_F_align).detach().numpy()
 
-    plt.figure()
-    plt.plot(X[0], label="First signal")
-    plt.plot(X_align[:,0,:][0], label="Data aligned with 1st archetype (1st signal)")
-    plt.legend()
-    plt.show()
+    # plt.figure()
+    # plt.plot(X[0], label="First signal")
+    # plt.plot(X_align[:,0,:][0], label="Data aligned with 1st archetype (1st signal)")
+    # plt.legend()
+    # plt.show()
 
     
     plt.figure()
