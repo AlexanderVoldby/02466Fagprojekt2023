@@ -7,7 +7,7 @@ from helpers.initializers import FurthestSum
 
 
 class torchAA(torch.nn.Module):
-    def __init__(self, X, rank):
+    def __init__(self, X, rank, alpha=1e-9):
         super(torchAA, self).__init__()
 
         # Shape of Matrix for reproduction
@@ -17,7 +17,7 @@ class torchAA(torch.nn.Module):
         self.softmax = torch.nn.Softmax(dim=1)
         self.lossfn = frobeniusLoss(self.X)
         Furthest = True
-        if Furthest == True:
+        if Furthest:
             noc = 10
             power = 1
             initial = 0
@@ -27,11 +27,14 @@ class torchAA(torch.nn.Module):
             for i in cols:
                 self.C[i] = power
             self.C = self.C.T
-            self.C = torch.tensor(self.C, requires_grad=True, dtype=torch.double)
-            self.C = torch.nn.Parameter(self.C)
+            self.C = self.C.clone().requires_grad_(True)
+            self.C = torch.nn.Parameter(self.C.type(torch.double))
         else:
             self.C = torch.nn.Parameter(torch.rand(rank, N, requires_grad=True, dtype=torch.double))
         self.S = torch.nn.Parameter(torch.rand(N, rank, requires_grad=True, dtype=torch.double))
+        self.optimizer = Adam(self.parameters(), lr=0.5)
+        self.stopper = ChangeStopper(alpha=alpha)
+        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=5)
 
 
     def forward(self):
@@ -44,17 +47,14 @@ class torchAA(torch.nn.Module):
 
         return SCX
 
-    def fit(self, verbose=False, return_loss=False, stopper = ChangeStopper(patience=5)):
-        stopper.reset()
-        optimizer = Adam(self.parameters(), lr=0.3)
-        scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5)
+    def fit(self, verbose=False, return_loss=False):
 
         # Convergence criteria
         running_loss = []
 
-        while not stopper.trigger():
+        while not self.stopper.trigger():
             # zero optimizer gradient
-            optimizer.zero_grad()
+            self.optimizer.zero_grad()
 
             # forward
             output = self.forward()
@@ -64,13 +64,13 @@ class torchAA(torch.nn.Module):
             loss.backward()
 
             # Update A and B
-            optimizer.step()
-            scheduler.step(loss)
+            self.optimizer.step()
+            self.scheduler.step(loss)
             # append loss for graphing
             running_loss.append(loss.item())
 
             # count with early stopping
-            stopper.track_loss(loss)
+            self.stopper.track_loss(loss)
 
             # print loss
             if verbose:

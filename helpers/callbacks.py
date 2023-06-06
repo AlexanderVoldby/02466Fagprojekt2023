@@ -1,5 +1,13 @@
 import numpy as np
-import torch.linalg
+import matplotlib.pyplot as plt
+import torch
+
+def plot_data(X, title=""):
+    plt.figure()
+    for signal in X:
+        plt.plot(signal)
+    plt.title(title)
+    plt.show()
 
 
 def explained_variance(original_data, reconstructed_data):
@@ -36,7 +44,6 @@ class Stopper:
     def reset(self):
         pass
 
-
 class EarlyStop(Stopper):
     def __init__(self, patience = 5, offset = 0) -> None:
         self.patience = patience
@@ -72,8 +79,6 @@ class RelativeStopper(Stopper):
     def reset(self):
         self.loss = 1e9
 
-
-# 
 class ChangeStopper(Stopper):
     def __init__(self, alpha=1e-8, patience=5):
         self.alpha = alpha
