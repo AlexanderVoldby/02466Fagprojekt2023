@@ -7,7 +7,7 @@ from helpers.initializers import FurthestSum
 import scipy.io
 
 class torchAA(torch.nn.Module):
-    def __init__(self, X, rank, alpha=1e-9):
+    def __init__(self, X, rank, alpha=1e-9, lr = 10, factor = 0.9, patience = 5):
         super(torchAA, self).__init__()
 
         # Shape of Matrix for reproduction
@@ -31,9 +31,9 @@ class torchAA(torch.nn.Module):
         # self.S = torch.nn.Parameter(self.S.T)
         
         
-        self.optimizer = Adam(self.parameters(), lr=0.2)
-        self.stopper = ChangeStopper(alpha=alpha)
-        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=0.9, patience=5)
+        self.optimizer = Adam(self.parameters(), lr=lr)
+        self.stopper = ChangeStopper(alpha=alpha, patience=patience+2)
+        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=factor, patience=patience)
 
  
     def forward(self):

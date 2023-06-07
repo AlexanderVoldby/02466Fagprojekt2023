@@ -5,11 +5,11 @@ class frobeniusLoss(torch.nn.Module):
     def __init__(self, x: torch.tensor):
         super().__init__()
         self.X = x
+        self.denominator = torch.linalg.matrix_norm(self.X, ord='fro')**2
     
     def forward(self, input):
         numerator = torch.linalg.matrix_norm(self.X - input, ord='fro')**2
-        denominator = torch.linalg.matrix_norm(self.X, ord='fro')**2
-        return numerator/denominator
+        return numerator/self.denominator
 
 
 class ShiftNMFLoss(torch.nn.Module):

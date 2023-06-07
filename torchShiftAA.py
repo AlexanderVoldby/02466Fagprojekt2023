@@ -8,10 +8,9 @@ import scipy.io
 import time
 
 class torchShiftAA(torch.nn.Module):
-    def __init__(self, X, rank, shift_constraint = 100):
+    def __init__(self, X, rank, alpha=1e-9, lr = 10, factor = 0.9, patience = 5):
         super(torchShiftAA, self).__init__()
 
-        self.shift_constraint = shift_constraint
         # Shape of Matrix for reproduction
         N, M = X.shape
         self.N, self.M = N, M
@@ -53,8 +52,10 @@ class torchShiftAA(torch.nn.Module):
         #self.tau = lambda: torch.round(self.tau_tilde)
         self.tau = lambda: self.tau_tilde
 
-    # def tau(self):
-    #     return torch.zeros(N, rank)
+        self.optimizer = Adam(self.parameters(), lr=lr)
+        self.stopper = ChangeStopper(alpha=alpha, patience=patience+5)
+        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=factor, patience=patience)
+
 
     def forward(self):
         # Implementation of shift AA.
@@ -85,15 +86,11 @@ class torchShiftAA(torch.nn.Module):
         return x
 
     def fit(self, verbose=False, return_loss=False, stopper = ChangeStopper(alpha=1/1000)):
-        optimizer = Adam(self.parameters(), lr=0.2)
-        scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.9, patience=5)
-
         # Convergence criteria
         running_loss = []
         while not stopper.trigger():
             # zero optimizer gradient
-            
-            optimizer.zero_grad()
+            self.optimizer.zero_grad()
 
             # forward
             output = self.forward()
@@ -104,7 +101,7 @@ class torchShiftAA(torch.nn.Module):
 
             # Update A and B
             optimizer.step()
-            scheduler.step(loss)
+            # scheduler.step(loss)
             # append loss for graphing
             running_loss.append(loss.item())
 
