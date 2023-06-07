@@ -10,7 +10,7 @@ from helpers.initializers import FurthestSum
 print("torchAA.py")
 
 class torchAA(torch.nn.Module):
-    def __init__(self, X, rank, initializer = None, noc = 10, power = 1, initial = 0, exclude = []):
+    def __init__(self, X, rank, initializer = None, noc = 3, power = 1, initial = 0, exclude = []):
         super(torchAA, self).__init__()
 
         # Shape of Matrix for reproduction
@@ -22,7 +22,9 @@ class torchAA(torch.nn.Module):
         
         
         if initializer is not None:
-            cols = FurthestSum(X, noc, initial, exclude)
+            print(noc)
+            print(rank)
+            cols = FurthestSum(X, rank, initial, exclude)
             self.C = torch.zeros(n_col, rank)
             for i in cols:
                 self.C[i] = power
@@ -49,7 +51,7 @@ class torchAA(torch.nn.Module):
     def fit(self, verbose=False, return_loss=False, stopper = ChangeStopper()):
         optimizer = Adam(self.parameters(), lr=0.5)
         scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5)
-
+        stopper.reset()
         # Convergence criteria
         running_loss = []
 
