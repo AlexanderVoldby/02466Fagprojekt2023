@@ -16,22 +16,9 @@ class torchAA(torch.nn.Module):
 
         self.softmax = torch.nn.Softmax(dim=1)
         self.lossfn = frobeniusLoss(self.X)
-        Furthest = True
-        if Furthest:
-            noc = 10
-            power = 1
-            initial = 0
-            exclude = []
-            cols = FurthestSum(X.T, noc, initial, exclude)
-            self.C = torch.zeros(N, rank)
-            for i in cols:
-                self.C[i] = power
-            self.C = self.C.T
-            self.C = self.C.clone().requires_grad_(True)
-            self.C = torch.nn.Parameter(self.C.type(torch.double))
-        else:
-            self.C = torch.nn.Parameter(torch.rand(rank, N, requires_grad=True, dtype=torch.double))
-        self.S = torch.nn.Parameter(torch.rand(N, rank, requires_grad=True, dtype=torch.double))
+        
+        self.C = torch.nn.Parameter(torch.randn(rank, N, requires_grad=True, dtype=torch.double)*3)
+        self.S = torch.nn.Parameter(torch.randn(N, rank, requires_grad=True, dtype=torch.double)*3)
         self.optimizer = Adam(self.parameters(), lr=0.5)
         self.stopper = ChangeStopper(alpha=alpha)
         self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=5)
