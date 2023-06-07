@@ -4,6 +4,8 @@ from helpers.callbacks import ChangeStopper
 from helpers.losses import frobeniusLoss
 from helpers.losses import ShiftNMFLoss
 
+import scipy.io
+import time
 
 class torchShiftAA(torch.nn.Module):
     def __init__(self, X, rank, shift_constraint = 100):
@@ -29,8 +31,20 @@ class torchShiftAA(torch.nn.Module):
         # DxN (C) * NxM (X) =  DxM (A)
         # NxD (S) *  DxM (A) = NxM (SA)    
         
-        self.C_tilde = torch.nn.Parameter(torch.randn(rank, N, requires_grad=True,dtype=torch.double)*3)
-        self.S_tilde = torch.nn.Parameter(torch.randn(N, rank, requires_grad=True, dtype=torch.double)*3)
+        # self.C_tilde = torch.nn.Parameter(torch.randn(rank, N, requires_grad=True,dtype=torch.double)*3)
+        # self.S_tilde = torch.nn.Parameter(torch.randn(N, rank, requires_grad=True, dtype=torch.double)*3)
+        
+        
+        mat = scipy.io.loadmat('helpers/PCHA/C.mat')
+        self.C_tilde = mat.get('c')
+        self.C_tilde = torch.tensor(self.C_tilde, requires_grad=True, dtype=torch.double)
+        self.C_tilde = torch.nn.Parameter(self.C_tilde.T)
+        
+        mat = scipy.io.loadmat('helpers/PCHA/S.mat')
+        self.S_tilde = mat.get('s')
+        self.S_tilde = torch.tensor(self.S_tilde, requires_grad=True, dtype=torch.double)
+        self.S_tilde = torch.nn.Parameter(self.S_tilde.T)
+        
         self.tau_tilde = torch.nn.Parameter(torch.zeros(N, rank, requires_grad=True, dtype=torch.double))
 
         self.C = lambda:self.softmax(self.C_tilde).type(torch.cdouble)
@@ -76,9 +90,9 @@ class torchShiftAA(torch.nn.Module):
 
         # Convergence criteria
         running_loss = []
-
         while not stopper.trigger():
             # zero optimizer gradient
+            
             optimizer.zero_grad()
 
             # forward
@@ -90,7 +104,7 @@ class torchShiftAA(torch.nn.Module):
 
             # Update A and B
             optimizer.step()
-            # scheduler.step(loss)
+            scheduler.step(loss)
             # append loss for graphing
             running_loss.append(loss.item())
 
@@ -99,8 +113,8 @@ class torchShiftAA(torch.nn.Module):
 
             # print loss
             if verbose:
-                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}", end="\r")
-
+                print(f"epoch: {len(running_loss)}, Loss: {1-loss.item()}", end="\r")
+        
         C = self.softmax(self.C_tilde)
         S = self.softmax(self.S_tilde)
         tau = self.tau().detach().numpy() 
