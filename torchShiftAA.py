@@ -29,15 +29,15 @@ class torchShiftAA(torch.nn.Module):
         # DxN (C) * NxM (X) =  DxM (A)
         # NxD (S) *  DxM (A) = NxM (SA)    
         
-        self.C_tilde = torch.nn.Parameter(torch.rand(rank, N, requires_grad=True,dtype=torch.double))
-        self.S_tilde = torch.nn.Parameter(torch.rand(N, rank, requires_grad=True, dtype=torch.double))
-        self.tau_tilde = torch.nn.Parameter(torch.zeros(N, rank), requires_grad=True)
+        self.C_tilde = torch.nn.Parameter(torch.randn(rank, N, requires_grad=True,dtype=torch.double)*3)
+        self.S_tilde = torch.nn.Parameter(torch.randn(N, rank, requires_grad=True, dtype=torch.double)*3)
+        self.tau_tilde = torch.nn.Parameter(torch.zeros(N, rank, requires_grad=True, dtype=torch.double))
 
         self.C = lambda:self.softmax(self.C_tilde).type(torch.cdouble)
         self.S = lambda:self.softmax(self.S_tilde).type(torch.cdouble)
         #self.tau = lambda:torch.tanh(self.tau_tilde)*self.shift_constraint
-        self.tau = lambda: torch.round(self.tau_tilde)
-        #self.tau = lambda: self.tau_tilde
+        # self.tau = lambda: torch.round(self.tau_tilde)
+        self.tau = lambda: self.tau_tilde
 
     # def tau(self):
     #     return torch.zeros(N, rank)
@@ -72,8 +72,8 @@ class torchShiftAA(torch.nn.Module):
         return x
 
     def fit(self, verbose=False, return_loss=False, stopper = ChangeStopper(alpha=1/1000)):
-        optimizer = Adam(self.parameters(), lr=0.4)
-        scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5)
+        optimizer = Adam(self.parameters(), lr=0.2)
+        scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.9, patience=5)
 
         # Convergence criteria
         running_loss = []
@@ -91,7 +91,7 @@ class torchShiftAA(torch.nn.Module):
 
             # Update A and B
             optimizer.step()
-            scheduler.step(loss)
+            # scheduler.step(loss)
             # append loss for graphing
             running_loss.append(loss.item())
 
