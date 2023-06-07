@@ -65,7 +65,7 @@ class EarlyStop(Stopper):
 
 
 class RelativeStopper(Stopper):
-    def __init__(self, data, alpha=1e-6):
+    def __init__(self, data, alpha=1e-8):
         self.norm = torch.linalg.matrix_norm(data, ord="fro").item()**2
         self.alpha = alpha
         self.loss = 1e9
@@ -75,9 +75,6 @@ class RelativeStopper(Stopper):
 
     def trigger(self):
         return self.loss/self.norm < self.alpha
-    
-    def reset(self):
-        self.loss = 1e9
 
 class ChangeStopper(Stopper):
     def __init__(self, alpha=1e-8, patience=5):
@@ -103,12 +100,29 @@ class ChangeStopper(Stopper):
                 self.counter = 0
 
     def trigger(self):
-        if self.ploss is None:
-            return False
-        else:
-            return abs(self.ploss - self.loss)/abs(self.ploss) < self.alpha
+        return self.counter >= self.patience
 
     def reset(self):
         self.ploss = None
         self.loss = None
-        self.counter = 0
+        self.counter = None
+
+class ConvergenceCriterion:
+    def __init__(self, x, convergence_threshold, num_epochs_convergence):
+        self.norm = torch.linalg.matrix_norm(x, ord="fro")**2
+        self.convergence_threshold = convergence_threshold
+        self.num_epochs_convergence = num_epochs_convergence
+        self.previous_loss = float('inf')
+        self.epochs_since_last_improvement = 0
+
+    def trigger(self, current_loss):
+        current_loss /= self.norm
+        self.previous_loss /= self.norm
+        if torch.abs(self.previous_loss - current_loss)/self.previous_loss < self.convergence_threshold:
+            self.epochs_since_last_improvement += 1
+        else:
+            self.epochs_since_last_improvement = 0
+        print(f"Loss difference {torch.abs(self.previous_loss - current_loss)/self.previous_loss}")
+        self.previous_loss = current_loss
+
+        return self.epochs_since_last_improvement >= self.num_epochs_convergence

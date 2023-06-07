@@ -36,6 +36,7 @@ def shift_dataset(W, H, tau):
     return V.numpy()
 
 # Random mixings:
+# initialiser med dirichlet fordeling og sæt parameter til 1
 W = np.random.rand(N, d)
 # Random gaussian shifts
 tau = np.random.randint(-1000, 1000, size=(N, d))
@@ -63,6 +64,8 @@ best_W, best_H, best_tau = params[np.argmin(shiftnmf_loss)]
 
 plot_data(best_H, "Signals determined by shiftNMF")
 plot_data(best_model.recon.detach().numpy(), "Dataset reconstructed by shiftNMF")
+print("Tau")
+print(best_tau)
 
 
 # Then with regular NMF:

@@ -25,13 +25,15 @@ class ShiftNMF(torch.nn.Module):
         # Initialization of Tensors/Matrices a and b with size NxR and RxM
         # Introduce regularization on W with min volume by making W have unit norm by dividing through
         # with the norm of W
-        self.W = torch.nn.Parameter(torch.rand(self.N, rank, requires_grad=True))
-        self.H = torch.nn.Parameter(torch.rand(rank, self.M, requires_grad=True))
+        self.W = torch.nn.Parameter(torch.randn(self.N, rank, requires_grad=True))*3
+        self.H = torch.nn.Parameter(torch.randn(rank, self.M, requires_grad=True))*3
         # Init tau between -1 and 1
         self.tau = torch.nn.Parameter(-2*self.shift_init * torch.rand(self.N, self.rank)+self.shift_init, requires_grad=True)
         # Tau is then cast to [-shift_constraint, shift_constraint]
         # self.tau = lambda: torch.tanh(self.tau_tilde) * self.shift_constraint
+        # Prøv også med SGD
         self.optim = Adam(self.parameters(), lr=0.3)
+        # Drop scheduler
         self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optim, mode='min', factor=0.1, patience=5)
 
     def forward(self):

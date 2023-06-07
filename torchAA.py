@@ -1,6 +1,6 @@
 import torch
 from torch.optim import Adam, lr_scheduler
-from helpers.callbacks import ChangeStopper
+from helpers.callbacks import ChangeStopper, RelativeStopper
 from helpers.losses import frobeniusLoss
 from helpers.initializers import FurthestSum
 
@@ -17,6 +17,8 @@ class torchAA(torch.nn.Module):
         self.softmax = torch.nn.Softmax(dim=1)
         self.lossfn = frobeniusLoss(self.X)
         Furthest = True
+        #TODO Initialize as double
+        # Enten drop Furthestsum eller drop gradienter på C indtil S er konvergeret på initialiseringen
         if Furthest:
             noc = 10
             power = 1
@@ -30,10 +32,11 @@ class torchAA(torch.nn.Module):
             self.C = self.C.clone().requires_grad_(True)
             self.C = torch.nn.Parameter(self.C)
         else:
+            # Ændr initialiseringen og initialiser som double
             self.C = torch.nn.Parameter(torch.rand(rank, N, requires_grad=True))
         self.S = torch.nn.Parameter(torch.rand(N, rank, requires_grad=True))
         self.optimizer = Adam(self.parameters(), lr=0.5)
-        self.stopper = ChangeStopper(alpha=alpha)
+        self.stopper = RelativeStopper(self.X)
         self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=5)
 
 

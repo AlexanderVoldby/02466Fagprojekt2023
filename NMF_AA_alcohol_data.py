@@ -8,11 +8,16 @@ import matplotlib.pyplot as plt
 
 def component_plot(components, labels, title):
     # Plotting the stacked bars
+    sorted_labels = sorted(labels)
+    colors = ["r", "g", "b"]
     x = np.arange(components.shape[0])
     plt.figure(figsize=(10, 6))  # Adjust the figure size as per your preference
-    plt.bar(x, components[:, 0], label=labels[0])
-    plt.bar(x, components[:, 1], bottom=components[:, 0], label=labels[1])
-    plt.bar(x, components[:, 2], bottom=components[:, 0] + components[:, 1], label=labels[2])
+    plt.bar(x, components[:, 0], label=labels[0],
+            color=colors[sorted_labels == labels[0]])
+    plt.bar(x, components[:, 1], bottom=components[:, 0], label=labels[1],
+            color=colors[sorted_labels == labels[1]])
+    plt.bar(x, components[:, 2], bottom=components[:, 0] + components[:, 1], label=labels[2],
+            color=colors[sorted_labels == labels[2]])
 
     # Adding labels and titles
     plt.xlabel('Datapoints')
@@ -70,7 +75,7 @@ if exp_var:
     plt.legend()
     plt.show()
 
-nmf = NMF(X, 3, alpha=1e-9)
+nmf = NMF(X, 3, alpha=1e-5)
 aa = torchAA(X, 3, alpha=1e-9)
 W, H = nmf.fit(verbose=True)
 C, S = aa.fit(verbose=True)

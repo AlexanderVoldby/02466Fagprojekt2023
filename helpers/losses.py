@@ -28,7 +28,8 @@ class VolLoss(torch.nn.Module):
         self.alpha = alpha
 
     def forward(self, x, h):
-        reg = torch.log(torch.linalg.det(torch.matmul(h, h.T)+1e-9))
+        #TODO gang med kxk I-matrix
+        reg = torch.log(torch.linalg.det(torch.matmul(h, h.T))+1e-9)
         loss = self.alpha*torch.linalg.matrix_norm(self.X - x, ord='fro')**2
         print(f"Loss: {loss}, reg: {reg}")
         return reg + loss

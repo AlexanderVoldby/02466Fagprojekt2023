@@ -60,7 +60,7 @@ class NMF(torch.nn.Module):
 
 
 class MVR_NMF(torch.nn.Module):
-    def __init__(self, X, rank, alpha=1e-9):
+    def __init__(self, X, rank, alpha=1e-8):
         super().__init__()
 
         n_row, n_col = X.shape
@@ -115,6 +115,8 @@ class MVR_NMF(torch.nn.Module):
 
 if __name__ == "__main__":
     from helpers.callbacks import explained_variance
+    nmf = NMF(X_clean, 5, alpha=1e-6)
+    nmf.fit(verbose=True)
     mvr_nmf = MVR_NMF(X_clean, 6)
     W, H = mvr_nmf.fit(verbose=True)
     print(f"Explained variance MVR_NMF: {explained_variance(X_clean, mvr_nmf.forward().detach().numpy())}")
