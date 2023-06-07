@@ -23,7 +23,7 @@ def FurthestSum(K, noc, i, exclude=[]):
     index[i] = False
     ind_t = i
     sum_dist = np.zeros(J)
-    noc = noc-1
+    noc = noc-1 if noc > 1 else 1 # prevent error when noc = 1, subscript of int
     if J > noc * I:
         # Fast implementation for large scale number of observations. Can be improved by reusing calculations
         Kt = K.copy()

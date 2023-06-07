@@ -12,7 +12,7 @@ class torchAA(torch.nn.Module):
 
         # Shape of Matrix for reproduction
         N, M = X.shape
-        self.X = torch.tensor(X)
+        self.X = torch.tensor(X, dtype=torch.double)
 
         self.softmax = torch.nn.Softmax(dim=1)
         self.lossfn = frobeniusLoss(self.X)
@@ -32,21 +32,20 @@ class torchAA(torch.nn.Module):
             self.C = self.C.clone().requires_grad_(True)
             self.C = torch.nn.Parameter(self.C)
         else:
-            # Ændr initialiseringen og initialiser som double
-            self.C = torch.nn.Parameter(torch.rand(rank, N, requires_grad=True))
-        self.S = torch.nn.Parameter(torch.rand(N, rank, requires_grad=True))
-        self.optimizer = Adam(self.parameters(), lr=0.5)
-        self.stopper = RelativeStopper(self.X)
+            self.C = torch.nn.Parameter(torch.randn(rank, N, requires_grad=True, dtype=torch.double)*3)
+            self.S = torch.nn.Parameter(torch.randn(N, rank, requires_grad=True, dtype=torch.double)*3)
+            self.optimizer = Adam(self.parameters(), lr=0.5)
+        self.stopper = ChangeStopper(self.X)
         self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=5)
 
 
     def forward(self):
 
         # first matrix Multiplication with softmax
-        CX = torch.matmul(self.softmax(self.C).double(), self.X.double())
+        CX = torch.matmul(self.softmax(self.C), self.X)
 
         # Second matrix multiplication with softmax
-        SCX = torch.matmul(self.softmax(self.S).double(), CX.double())
+        SCX = torch.matmul(self.softmax(self.S), CX)
 
         return SCX
 
