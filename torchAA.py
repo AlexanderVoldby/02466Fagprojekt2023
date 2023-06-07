@@ -7,54 +7,41 @@ from helpers.initializers import FurthestSum
 
 
 class torchAA(torch.nn.Module):
-    def __init__(self, X, rank):
+    def __init__(self, X, rank, alpha=1e-9):
         super(torchAA, self).__init__()
 
         # Shape of Matrix for reproduction
         N, M = X.shape
-        self.X = torch.tensor(X)
+        self.X = torch.tensor(X, dtype=torch.double)
 
         self.softmax = torch.nn.Softmax(dim=1)
         self.lossfn = frobeniusLoss(self.X)
-        Furthest = True
-        if Furthest == True:
-            noc = 10
-            power = 1
-            initial = 0
-            exclude = []
-            cols = FurthestSum(X.T, noc, initial, exclude)
-            self.C = torch.zeros(N, rank)
-            for i in cols:
-                self.C[i] = power
-            self.C = self.C.T
-            self.C = torch.tensor(self.C, requires_grad=True)
-            self.C = torch.nn.Parameter(self.C)
-        else:
-            self.C = torch.nn.Parameter(torch.rand(rank, N, requires_grad=True))
-        self.S = torch.nn.Parameter(torch.rand(N, rank, requires_grad=True))
+        
+        self.C = torch.nn.Parameter(torch.randn(rank, N, requires_grad=True, dtype=torch.double)*3)
+        self.S = torch.nn.Parameter(torch.randn(N, rank, requires_grad=True, dtype=torch.double)*3)
+        self.optimizer = Adam(self.parameters(), lr=0.5)
+        self.stopper = ChangeStopper(alpha=alpha)
+        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=0.1, patience=5)
 
 
     def forward(self):
 
         # first matrix Multiplication with softmax
-        CX = torch.matmul(self.softmax(self.C).double(), self.X.double())
+        CX = torch.matmul(self.softmax(self.C), self.X)
 
         # Second matrix multiplication with softmax
-        SCX = torch.matmul(self.softmax(self.S).double(), CX.double())
+        SCX = torch.matmul(self.softmax(self.S), CX)
 
         return SCX
 
-    def fit(self, verbose=False, return_loss=False, stopper = ChangeStopper()):
-        stopper.reset()
-        optimizer = Adam(self.parameters(), lr=0.4)
-        scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5)
+    def fit(self, verbose=False, return_loss=False):
 
         # Convergence criteria
         running_loss = []
 
-        while not stopper.trigger():
+        while not self.stopper.trigger():
             # zero optimizer gradient
-            optimizer.zero_grad()
+            self.optimizer.zero_grad()
 
             # forward
             output = self.forward()
@@ -64,13 +51,13 @@ class torchAA(torch.nn.Module):
             loss.backward()
 
             # Update A and B
-            optimizer.step()
-            scheduler.step(loss)
+            self.optimizer.step()
+            self.scheduler.step(loss)
             # append loss for graphing
             running_loss.append(loss.item())
 
             # count with early stopping
-            stopper.track_loss(loss)
+            self.stopper.track_loss(loss)
 
             # print loss
             if verbose:
