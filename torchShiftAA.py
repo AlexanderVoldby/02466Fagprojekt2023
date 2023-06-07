@@ -22,7 +22,7 @@ class torchShiftAA(torch.nn.Module):
 
         # self.lossfn = frobeniusLoss(torch.fft.fft(self.X))
         # Should be the same as NMF?
-        self.lossfn = ShiftNMFLoss(torch.fft.fft(self.X))
+        self.lossfn = frobeniusLoss(torch.fft.fft(self.X))
 
 
         # Initialization of Tensors/Matrices S and C with size Col x Rank and Rank x Col
