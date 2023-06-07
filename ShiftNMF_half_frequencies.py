@@ -9,13 +9,12 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
 class ShiftNMF(torch.nn.Module):
-    def __init__(self, X, rank, alpha=1e-8, shift_init = 5000):
+    def __init__(self, X, rank, alpha=1e-8):
         super().__init__()
 
         # Shape of Matrix for reproduction
         self.rank = rank
         self.X = torch.tensor(X)
-        self.shift_init = shift_init
         
         self.N, self.M = X.shape
         self.softplus = torch.nn.Softplus()

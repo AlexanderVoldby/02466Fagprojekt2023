@@ -68,7 +68,6 @@ class torchShiftAA(torch.nn.Module):
 
         # Reconstruction
         x = torch.einsum('NdM,dM->NM', S_shift, self.A_F)
-        self.recon = torch.fft.ifft(x)
         return x
 
     def fit(self, verbose=False, return_loss=False, stopper = ChangeStopper(alpha=1/1000)):
@@ -108,6 +107,9 @@ class torchShiftAA(torch.nn.Module):
 
         C = C.detach().numpy()
         S = S.detach().numpy()
+        self.tau = lambda: torch.round(self.tau_tilde)
+        output = self.forward()
+        self.recon = torch.fft.ifft(output)
 
         return C, S, tau
 
