@@ -55,6 +55,10 @@ class EarlyStop(Stopper):
             
     def trigger(self):
         return self.counter > self.patience
+    
+    def reset(self):
+        self.counter = 0
+        self.lowest = np.Inf
 
 
 class RelativeStopper(Stopper):
