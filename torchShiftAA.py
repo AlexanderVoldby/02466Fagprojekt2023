@@ -36,7 +36,7 @@ class torchShiftAA(torch.nn.Module):
         self.C = lambda:self.softmax(self.C_tilde).type(torch.cdouble)
         self.S = lambda:self.softmax(self.S_tilde).type(torch.cdouble)
         #self.tau = lambda:torch.tanh(self.tau_tilde)*self.shift_constraint
-        # self.tau = lambda: torch.round(self.tau_tilde)
+        #self.tau = lambda: torch.round(self.tau_tilde)
         self.tau = lambda: self.tau_tilde
 
     # def tau(self):
@@ -68,7 +68,6 @@ class torchShiftAA(torch.nn.Module):
 
         # Reconstruction
         x = torch.einsum('NdM,dM->NM', S_shift, self.A_F)
-        self.recon = torch.fft.ifft(x)
         return x
 
     def fit(self, verbose=False, return_loss=False, stopper = ChangeStopper(alpha=1/1000)):
@@ -104,10 +103,13 @@ class torchShiftAA(torch.nn.Module):
 
         C = self.softmax(self.C_tilde)
         S = self.softmax(self.S_tilde)
-        tau = torch.tanh(self.tau_tilde.detach()).numpy() * self.shift_constraint
+        tau = self.tau().detach().numpy() 
 
         C = C.detach().numpy()
         S = S.detach().numpy()
+        self.tau = lambda: torch.round(self.tau_tilde)
+        output = self.forward()
+        self.recon = torch.fft.ifft(output)
 
         return C, S, tau
 
