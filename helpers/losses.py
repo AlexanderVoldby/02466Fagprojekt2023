@@ -7,7 +7,9 @@ class frobeniusLoss(torch.nn.Module):
         self.X = x
     
     def forward(self, input):
-        return torch.linalg.matrix_norm(self.X - input, ord='fro')**2
+        numerator = torch.linalg.matrix_norm(self.X - input, ord='fro')**2
+        denominator = torch.linalg.matrix_norm(self.X, ord='fro')**2
+        return numerator/denominator
 
 
 class ShiftNMFLoss(torch.nn.Module):
