@@ -30,19 +30,19 @@ class torchShiftAA(torch.nn.Module):
         # DxN (C) * NxM (X) =  DxM (A)
         # NxD (S) *  DxM (A) = NxM (SA)    
         
-        # self.C_tilde = torch.nn.Parameter(torch.randn(rank, N, requires_grad=True,dtype=torch.double)*3)
-        # self.S_tilde = torch.nn.Parameter(torch.randn(N, rank, requires_grad=True, dtype=torch.double)*3)
+        self.C_tilde = torch.nn.Parameter(torch.randn(rank, N, requires_grad=True,dtype=torch.double)*3)
+        self.S_tilde = torch.nn.Parameter(torch.randn(N, rank, requires_grad=True, dtype=torch.double)*3)
         
         
-        mat = scipy.io.loadmat('helpers/PCHA/C.mat')
-        self.C_tilde = mat.get('c')
-        self.C_tilde = torch.tensor(self.C_tilde, requires_grad=True, dtype=torch.double)
-        self.C_tilde = torch.nn.Parameter(self.C_tilde.T)
+        # mat = scipy.io.loadmat('helpers/PCHA/C.mat')
+        # self.C_tilde = mat.get('c')
+        # self.C_tilde = torch.tensor(self.C_tilde, requires_grad=True, dtype=torch.double)
+        # self.C_tilde = torch.nn.Parameter(self.C_tilde.T)
         
-        mat = scipy.io.loadmat('helpers/PCHA/S.mat')
-        self.S_tilde = mat.get('s')
-        self.S_tilde = torch.tensor(self.S_tilde, requires_grad=True, dtype=torch.double)
-        self.S_tilde = torch.nn.Parameter(self.S_tilde.T)
+        # mat = scipy.io.loadmat('helpers/PCHA/S.mat')
+        # self.S_tilde = mat.get('s')
+        # self.S_tilde = torch.tensor(self.S_tilde, requires_grad=True, dtype=torch.double)
+        # self.S_tilde = torch.nn.Parameter(self.S_tilde.T)
         
         self.tau_tilde = torch.nn.Parameter(torch.zeros(N, rank, requires_grad=True, dtype=torch.double))
 
@@ -100,7 +100,7 @@ class torchShiftAA(torch.nn.Module):
             loss.backward()
 
             # Update A and B
-            optimizer.step()
+            self.optimizer.step()
             # scheduler.step(loss)
             # append loss for graphing
             running_loss.append(loss.item())
@@ -121,8 +121,11 @@ class torchShiftAA(torch.nn.Module):
         self.tau = lambda: torch.round(self.tau_tilde)
         output = self.forward()
         self.recon = torch.fft.ifft(output)
-
-        return C, S, tau
+        if return_loss:
+            return C, S, tau, running_loss
+        else:
+            return C, S, tau
+        
 
 if __name__ == "__main__":
     import numpy as np
