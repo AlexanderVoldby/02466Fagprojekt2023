@@ -1,6 +1,5 @@
 import scipy
 import numpy as np
-import torch
 import matplotlib.pyplot as plt
 from helpers.callbacks import explained_variance, plot_data
 from torchNMF import MVR_NMF
@@ -20,7 +19,7 @@ target_labels = mat.get('yLabels')
 axis = mat.get("Axis")
 
 # Run MVR on a finer grid and plot it
-regs = np.logspace(-8, 2, num=10, endpoint=False)
+regs = np.logspace(-12, -2, num=10, endpoint=False)
 explained_vars = []
 hs = []
 for reg in regs:
