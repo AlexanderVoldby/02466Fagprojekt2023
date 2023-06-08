@@ -5,22 +5,24 @@ from torchAA import torchAA
 from helpers.callbacks import explained_variance, ChangeStopper, plot_data
 import matplotlib.pyplot as plt
 
-
+label_colors = {}
 def component_plot(components, labels, title):
-    # Plotting the stacked bars
-    sorted_labels = sorted(labels)
-    colors = ["r", "g", "b"]
+    global label_colors
+    for label in labels:
+        if label not in label_colors:
+            color = np.random.rand(3)
+            label_colors[label] = color
     x = np.arange(components.shape[0])
     plt.figure(figsize=(10, 6))  # Adjust the figure size as per your preference
     plt.bar(x, components[:, 0], label=labels[0],
-            color=colors[sorted_labels == labels[0]])
+            color=label_colors[labels[0]])
     plt.bar(x, components[:, 1], bottom=components[:, 0], label=labels[1],
-            color=colors[sorted_labels == labels[1]])
+            color=label_colors[labels[1]])
     plt.bar(x, components[:, 2], bottom=components[:, 0] + components[:, 1], label=labels[2],
-            color=colors[sorted_labels == labels[2]])
+            color=label_colors[labels[2]])
 
     # Adding labels and titles
-    plt.xlabel('Datapoints')
+    plt.xlabel('Samples')
     plt.ylabel('Percentage')
     plt.title(title)
     plt.legend()
@@ -56,7 +58,7 @@ plt.show()
 # Fit NMF and AA 10 times and get an average loss curve for each as well as an average explained variance
 exp_var = False
 if exp_var:
-    max_components = 5
+    max_components = 7
     aa_explained = []
     nmf_explained = []
     for i in range(max_components):
@@ -75,10 +77,18 @@ if exp_var:
     plt.legend()
     plt.show()
 
-nmf = NMF(X, 3, alpha=1e-5)
+nmf = NMF(X, 3, alpha=1e-9)
 aa = torchAA(X, 3, alpha=1e-9)
 W, H = nmf.fit(verbose=True)
-C, S = aa.fit(verbose=True)
+n_iterations = 10
+losses = []
+params = []
+for i in range(n_iterations):
+    aa = torchAA(X, 3, alpha=1e-9)
+    C, S, loss = aa.fit(verbose=True, return_loss=True)
+    losses.append(loss)
+    params.append((C, S))
+C, S = params[np.argmin(losses)]
 aa_components = np.matmul(C, X)
 
 # Find the alcohols that the components correspond to with least squares difference
