@@ -85,10 +85,10 @@ class torchShiftAA(torch.nn.Module):
         x = torch.einsum('NdM,dM->NM', S_shift, self.A_F)
         return x
 
-    def fit(self, verbose=False, return_loss=False, stopper = ChangeStopper(alpha=1/1000)):
+    def fit(self, verbose=False, return_loss=False):
         # Convergence criteria
         running_loss = []
-        while not stopper.trigger():
+        while not self.stopper.trigger():
             # zero optimizer gradient
             self.optimizer.zero_grad()
 
@@ -106,7 +106,7 @@ class torchShiftAA(torch.nn.Module):
             running_loss.append(loss.item())
 
             # count with early stopping
-            stopper.track_loss(loss)
+            self.stopper.track_loss(loss)
 
             # print loss
             if verbose:
@@ -125,7 +125,7 @@ class torchShiftAA(torch.nn.Module):
             return C, S, tau, running_loss
         else:
             return C, S, tau
-        
+
 
 if __name__ == "__main__":
     import numpy as np
