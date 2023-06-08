@@ -9,13 +9,12 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
 class ShiftNMF(torch.nn.Module):
-    def __init__(self, X, rank, alpha=1e-8, shift_init = 5000):
+    def __init__(self, X, rank, alpha=1e-8):
         super().__init__()
 
         # Shape of Matrix for reproduction
         self.rank = rank
         self.X = torch.tensor(X)
-        self.shift_init = shift_init
         
         self.N, self.M = X.shape
         self.softplus = torch.nn.Softplus()
@@ -28,17 +27,14 @@ class ShiftNMF(torch.nn.Module):
         self.W = torch.nn.Parameter(torch.randn(self.N, rank, requires_grad=True))*3
         self.H = torch.nn.Parameter(torch.randn(rank, self.M, requires_grad=True))*3
         # Init tau between -1 and 1
-        self.tau = torch.nn.Parameter(-2*self.shift_init * torch.rand(self.N, self.rank)+self.shift_init, requires_grad=True)
-        # Tau is then cast to [-shift_constraint, shift_constraint]
-        # self.tau = lambda: torch.tanh(self.tau_tilde) * self.shift_constraint
+        self.tau = torch.nn.Parameter(torch.randn(self.N, self.rank), requires_grad=True)
         # Prøv også med SGD
-        self.optim = Adam(self.parameters(), lr=0.3)
+        self.optim = Adam(self.parameters(), lr=0.2)
         # Drop scheduler
-        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optim, mode='min', factor=0.1, patience=5)
+        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optim, mode='min', factor=0.9, patience=5)
 
     def forward(self):
         # Get half of the frequencies
-        # TODO: Sørg for at det virker for både lige og ulige data
         Nf = self.M // 2 + 1
         # Fourier transform of H along the second dimension
         Hf = torch.fft.fft(self.softplus(self.H), dim=1)
@@ -92,7 +88,7 @@ class ShiftNMF(torch.nn.Module):
 
 
 if __name__ == "__main__":
-    nmf = ShiftNMF(X_clean, 4, shift_init=5)
+    nmf = ShiftNMF(X_clean, 4)
     nmf.to(device)
     W, H, tau = nmf.fit(verbose=True)
 

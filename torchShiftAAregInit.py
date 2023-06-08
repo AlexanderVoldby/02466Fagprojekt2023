@@ -4,13 +4,16 @@ from helpers.callbacks import ChangeStopper
 from helpers.losses import frobeniusLoss
 from helpers.losses import ShiftNMFLoss
 
+import torchAA
+
 import scipy.io
 import time
 
-class torchShiftAA(torch.nn.Module):
-    def __init__(self, X, rank, alpha=1e-9, lr = 10, factor = 0.9, patience = 5):
-        super(torchShiftAA, self).__init__()
+class torchShiftAAregInit(torch.nn.Module):
+    def __init__(self, X, rank, shift_constraint = 100):
+        super(torchShiftAAregInit, self).__init__()
 
+        self.shift_constraint = shift_constraint
         # Shape of Matrix for reproduction
         N, M = X.shape
         self.N, self.M = N, M
@@ -33,16 +36,19 @@ class torchShiftAA(torch.nn.Module):
         # self.C_tilde = torch.nn.Parameter(torch.randn(rank, N, requires_grad=True,dtype=torch.double)*3)
         # self.S_tilde = torch.nn.Parameter(torch.randn(N, rank, requires_grad=True, dtype=torch.double)*3)
         
+        AA = torchAA.torchAA(X, rank)
+        AA.fit(verbose=True)
+        self.C_tilde, self.S_tilde = AA.C, AA.S
         
-        mat = scipy.io.loadmat('helpers/PCHA/C.mat')
-        self.C_tilde = mat.get('c')
-        self.C_tilde = torch.tensor(self.C_tilde, requires_grad=True, dtype=torch.double)
-        self.C_tilde = torch.nn.Parameter(self.C_tilde.T)
+        # mat = scipy.io.loadmat('helpers/PCHA/C.mat')
+        # self.C_tilde = mat.get('c')
+        # self.C_tilde = torch.tensor(self.C_tilde, requires_grad=True, dtype=torch.double)
+        self.C_tilde = torch.nn.Parameter(self.C_tilde)
         
-        mat = scipy.io.loadmat('helpers/PCHA/S.mat')
-        self.S_tilde = mat.get('s')
-        self.S_tilde = torch.tensor(self.S_tilde, requires_grad=True, dtype=torch.double)
-        self.S_tilde = torch.nn.Parameter(self.S_tilde.T)
+        # mat = scipy.io.loadmat('helpers/PCHA/S.mat')
+        # self.S_tilde = mat.get('s')
+        # self.S_tilde = torch.tensor(self.S_tilde, requires_grad=True, dtype=torch.double)
+        self.S_tilde = torch.nn.Parameter(self.S_tilde)
         
         self.tau_tilde = torch.nn.Parameter(torch.zeros(N, rank, requires_grad=True, dtype=torch.double))
 
@@ -52,10 +58,8 @@ class torchShiftAA(torch.nn.Module):
         #self.tau = lambda: torch.round(self.tau_tilde)
         self.tau = lambda: self.tau_tilde
 
-        self.optimizer = Adam(self.parameters(), lr=lr)
-        self.stopper = ChangeStopper(alpha=alpha, patience=patience+5)
-        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=factor, patience=patience)
-
+    # def tau(self):
+    #     return torch.zeros(N, rank)
 
     def forward(self):
         # Implementation of shift AA.
@@ -86,11 +90,15 @@ class torchShiftAA(torch.nn.Module):
         return x
 
     def fit(self, verbose=False, return_loss=False, stopper = ChangeStopper(alpha=1/1000)):
+        optimizer = Adam(self.parameters(), lr=0.05)
+        scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.9, patience=5)
+
         # Convergence criteria
         running_loss = []
         while not stopper.trigger():
             # zero optimizer gradient
-            self.optimizer.zero_grad()
+            
+            optimizer.zero_grad()
 
             # forward
             output = self.forward()
@@ -101,7 +109,7 @@ class torchShiftAA(torch.nn.Module):
 
             # Update A and B
             optimizer.step()
-            # scheduler.step(loss)
+            scheduler.step(loss)
             # append loss for graphing
             running_loss.append(loss.item())
 
@@ -111,6 +119,7 @@ class torchShiftAA(torch.nn.Module):
             # print loss
             if verbose:
                 print(f"epoch: {len(running_loss)}, Loss: {1-loss.item()}", end="\r")
+
         
         C = self.softmax(self.C_tilde)
         S = self.softmax(self.S_tilde)
@@ -135,7 +144,7 @@ if __name__ == "__main__":
     N, M = X.shape
     rank = 3
     D = rank
-    AA = torchShiftAA(X, rank)
+    AA = torchShiftAAregInit(X, rank)
     print("test")
     C,S, tau = AA.fit(verbose=True)
 
