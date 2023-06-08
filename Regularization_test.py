@@ -5,6 +5,14 @@ import matplotlib.pyplot as plt
 from helpers.callbacks import explained_variance, plot_data
 from torchNMF import MVR_NMF
 
+def plot_components(matrix, title):
+    fig, ax = plt.subplots(matrix.shape[0])
+    for i in range(matrix.shape[0]):
+        ax[i].plot(matrix[i])
+    plt.suptitle(title)
+    plt.show()
+
+
 mat = scipy.io.loadmat('helpers/data/NMR_mix_DoE.mat')
 X = mat.get('xData')
 targets = mat.get('yData')
@@ -31,4 +39,4 @@ ax.set_xscale("log")
 plt.show()
 
 for h, reg in zip(hs, regs):
-    plot_data(h, f"Latent components with regularization {reg}")
+    plot_components(h, f"Latent components with regularization {reg}")
