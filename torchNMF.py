@@ -6,7 +6,7 @@ from helpers.data import X_clean
 import matplotlib.pyplot as plt
 
 class NMF(torch.nn.Module):
-    def __init__(self, X, rank, alpha=1e-9, lr = 10, factor = 0.9, patience = 5):
+    def __init__(self, X, rank, alpha=1e-9, lr=0.5, patience=5, factor=0.9):
         super().__init__()
 
         n_row, n_col = X.shape
@@ -14,8 +14,8 @@ class NMF(torch.nn.Module):
         self.lossfn = frobeniusLoss(torch.tensor(X))
 
         # Initialization of Tensors/Matrices a and b with size NxR and RxM
-        self.W = torch.nn.Parameter(torch.rand(n_row, rank, requires_grad=True))
-        self.H = torch.nn.Parameter(torch.rand(rank, n_col, requires_grad=True))
+        self.W = torch.nn.Parameter(torch.randn(n_row, rank, requires_grad=True)*3)
+        self.H = torch.nn.Parameter(torch.randn(rank, n_col, requires_grad=True)*3)
 
         self.optimizer = Adam(self.parameters(), lr=lr)
         self.stopper = ChangeStopper(alpha=alpha, patience=patience+5)
@@ -60,21 +60,22 @@ class NMF(torch.nn.Module):
 
 
 class MVR_NMF(torch.nn.Module):
-    def __init__(self, X, rank, alpha=1e-9):
+    def __init__(self, X, rank, regularization, lr=0.2, alpha=1e-8, patience=5, factor=0.9):
         super().__init__()
 
         n_row, n_col = X.shape
         self.rank = rank
         self.softmax = torch.nn.Softmax(dim=1) # dim = 1 is on the rows
-        self.lossfn = VolLoss(torch.tensor(X))
+        self.lossfn = VolLoss(torch.tensor(X), regularization)
         self.softplus = torch.nn.Softplus()
-        self.stopper = ChangeStopper(alpha=alpha)
+
         # Initialization of Tensors/Matrices a and b with size NxR and RxM
         self.W = torch.nn.Parameter(torch.rand(n_row, rank, requires_grad=True))
         self.H = torch.nn.Parameter(torch.rand(rank, n_col, requires_grad=True))
 
-        self.optim = Adam(self.parameters(), lr=0.5)
-        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optim, mode='min', factor=0.9, patience=5)
+        self.optim = Adam(self.parameters(), lr=lr)
+        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optim, mode='min', factor=factor, patience=patience)
+        self.stopper = ChangeStopper(alpha=alpha, patience=patience+5)
 
     def forward(self):
         WH = torch.matmul(self.softmax(self.W), self.softplus(self.H))
@@ -115,7 +116,7 @@ class MVR_NMF(torch.nn.Module):
 
 if __name__ == "__main__":
     from helpers.callbacks import explained_variance
-    mvr_nmf = MVR_NMF(X_clean, 6)
+    mvr_nmf = MVR_NMF(X_clean, 6, regularization=1e-6)
     W, H = mvr_nmf.fit(verbose=True)
     print(f"Explained variance MVR_NMF: {explained_variance(X_clean, mvr_nmf.forward().detach().numpy())}")
     plt.figure()

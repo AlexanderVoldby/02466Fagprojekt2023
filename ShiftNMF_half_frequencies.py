@@ -1,23 +1,31 @@
 import torch
+import scipy
 from torch.optim import Adam, lr_scheduler
 from helpers.data import X, X_clean
 from helpers.callbacks import ChangeStopper
-from helpers.losses import frobeniusLoss
+from helpers.losses import frobeniusLoss, ShiftNMFLoss
 import matplotlib.pyplot as plt
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-print(device)
 
 class ShiftNMF(torch.nn.Module):
-    def __init__(self, X, rank, alpha=1e-9, lr = 10, factor = 0.9, patience = 5):
+    def __init__(self, X, rank, lr=0.2, alpha=1e-8, patience=10, factor=0.9):
         super().__init__()
 
-        # Shape of Matrix for reproduction
         self.rank = rank
         self.X = torch.tensor(X)
-        
         self.N, self.M = X.shape
+
         self.softplus = torch.nn.Softplus()
+        self.lossfn = ShiftNMFLoss(torch.fft.fft(self.X))
+        
+        # Initialization of Tensors/Matrices a and b with size NxR and RxM
+        self.W = torch.nn.Parameter(torch.randn(self.N, rank, requires_grad=True)*5)
+        self.H = torch.nn.Parameter(torch.randn(rank, self.M, requires_grad=True)*5)
+        self.tau = torch.nn.Parameter(torch.randn(self.N, self.rank)*10, requires_grad=True)
+        # Prøv også med SGD
+        self.stopper = ChangeStopper(alpha=alpha, patience=patience + 5)
+        self.optim = Adam(self.parameters(), lr=lr)
+        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optim, mode='min', factor=factor, patience=patience)
         self.lossfn = frobeniusLoss(torch.fft.fft(self.X))
         
         # Initialization of Tensors/Matrices a and b with size NxR and RxM
@@ -35,12 +43,10 @@ class ShiftNMF(torch.nn.Module):
 
     def forward(self):
         # Get half of the frequencies
-        # TODO: Sørg for at det virker for både lige og ulige data
         Nf = self.M // 2 + 1
         # Fourier transform of H along the second dimension
-        Hf = torch.fft.fft(self.softplus(self.H), dim=1)
+        Hf = torch.fft.fft(self.softplus(self.H), dim=1)[:, :Nf]
         # Keep only the first Nf[1] elements of the Fourier transform of H
-        Hf = Hf[:, :Nf]
         # Construct the shifted Fourier transform of H
         Hf_reverse = torch.flip(Hf[:, 1:Nf-1], dims=[1])
         # Concatenate the original columns with the reversed columns along the second dimension
@@ -89,8 +95,14 @@ class ShiftNMF(torch.nn.Module):
 
 
 if __name__ == "__main__":
-    nmf = ShiftNMF(X_clean, 4, shift_init=5)
-    nmf.to(device)
+    mat = scipy.io.loadmat('helpers/data/NMR_mix_DoE.mat')
+
+    # Get X and Labels. Probably different for the other dataset, but i didn't check :)
+    X = mat.get('xData')
+    targets = mat.get('yData')
+    target_labels = mat.get('yLabels')
+    axis = mat.get("Axis")
+    nmf = ShiftNMF(X, 3)
     W, H, tau = nmf.fit(verbose=True)
 
     plt.figure()
