@@ -40,7 +40,7 @@ def shift_dataset(W, H, tau):
 # initialiser med dirichlet fordeling og sæt parameter til 1
 W = np.random.randn(N, d)
 # Random gaussian shifts
-tau = np.random.randn(N, d)
+tau = np.round(np.random.randn(N, d)*100)
 # Purely positive underlying signals. I define them as 3 gaussian peaks with random mean and std.
 mean = [40, 300, 700]
 std = [10, 20, 50]
@@ -52,19 +52,21 @@ X = shift_dataset(W, H, tau)
 plot_data(X, "Dataset build from mixing and shifts of the three sources")
 
 # Try to find real components with shiftNMF:
-shiftnmf_loss = []
-iterations = 5
-models = [ShiftNMF(X, 3, alpha=1e-9) for i in range(iterations)]
-params = []
-for i in range(iterations):
-    W_, H_, tau_, loss = models[i].fit(verbose=True, return_loss=True)
-    shiftnmf_loss.append(loss[-1])
-    params.append((W_, H_, tau_))
-best_model = models[np.argmin(shiftnmf_loss)]
-best_W, best_H, best_tau = params[np.argmin(shiftnmf_loss)]
+# shiftnmf_loss = []
+# iterations = 1
+# models = [ShiftNMF(X, 3, alpha=1e-9) for i in range(iterations)]
+# params = []
+# for i in range(iterations):
+#     W_, H_, tau_, loss = models[i].fit(verbose=True, return_loss=True)
+#     shiftnmf_loss.append(loss[-1])
+#     params.append((W_, H_, tau_))
+# best_model = models[np.argmin(shiftnmf_loss)]
+# best_W, best_H, best_tau = params[np.argmin(shiftnmf_loss)]
+shiftnmf = ShiftNMF(X, 3)
+best_W, best_H, best_tau = shiftnmf.fit(verbose=True)
 
 plot_data(best_H, "Signals determined by shiftNMF")
-plot_data(np.fft.ifft(best_model.forward().detach().numpy()), "Dataset reconstructed by shiftNMF")
+plot_data(np.fft.ifft(shiftnmf.forward().detach().numpy()), "Dataset reconstructed by shiftNMF")
 print("Tau")
 print(best_tau)
 
