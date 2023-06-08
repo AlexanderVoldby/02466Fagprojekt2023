@@ -19,7 +19,7 @@ class NMF(torch.nn.Module):
         self.H = torch.nn.Parameter(torch.rand(rank, n_col, requires_grad=True))
 
         self.optim = Adam(self.parameters(), lr=0.3)
-        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optim, mode='min', factor=0.1, patience=5)
+        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optim, mode='min', factor=0.9, patience=5)
 
     def forward(self):
         WH = torch.matmul(self.softplus(self.W), self.softplus(self.H))
@@ -60,21 +60,22 @@ class NMF(torch.nn.Module):
 
 
 class MVR_NMF(torch.nn.Module):
-    def __init__(self, X, rank, alpha=1e-8):
+    def __init__(self, X, rank, regularization, alpha=1e-8):
         super().__init__()
 
         n_row, n_col = X.shape
         self.rank = rank
         self.softmax = torch.nn.Softmax(dim=1) # dim = 1 is on the rows
-        self.lossfn = VolLoss(torch.tensor(X))
+        self.lossfn = VolLoss(torch.tensor(X), regularization)
         self.softplus = torch.nn.Softplus()
-        self.stopper = ChangeStopper(alpha=alpha)
+
         # Initialization of Tensors/Matrices a and b with size NxR and RxM
         self.W = torch.nn.Parameter(torch.rand(n_row, rank, requires_grad=True))
         self.H = torch.nn.Parameter(torch.rand(rank, n_col, requires_grad=True))
 
-        self.optim = Adam(self.parameters(), lr=0.3)
-        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optim, mode='min', factor=0.1, patience=5)
+        self.optim = Adam(self.parameters(), lr=20)
+        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optim, mode='min', factor=0.9, patience=5)
+        self.stopper = ChangeStopper(alpha=alpha, patience=10)
 
     def forward(self):
         WH = torch.matmul(self.softmax(self.W), self.softplus(self.H))
@@ -115,9 +116,7 @@ class MVR_NMF(torch.nn.Module):
 
 if __name__ == "__main__":
     from helpers.callbacks import explained_variance
-    nmf = NMF(X_clean, 5, alpha=1e-6)
-    nmf.fit(verbose=True)
-    mvr_nmf = MVR_NMF(X_clean, 6)
+    mvr_nmf = MVR_NMF(X_clean, 6, regularization=0.01)
     W, H = mvr_nmf.fit(verbose=True)
     print(f"Explained variance MVR_NMF: {explained_variance(X_clean, mvr_nmf.forward().detach().numpy())}")
     plt.figure()
