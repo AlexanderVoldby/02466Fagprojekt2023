@@ -38,7 +38,11 @@ class torchShiftAAregInit(torch.nn.Module):
         
         AA = torchAA.torchAA(X, rank)
         AA.fit(verbose=True)
+        
+        print('\n initialized C and S \n')
         self.C_tilde, self.S_tilde = AA.C, AA.S
+        
+        self.C_init, self.S_init = self.softmax(self.C_tilde).detach().numpy(), self.softmax(self.S_tilde).detach().numpy()
         
         # mat = scipy.io.loadmat('helpers/PCHA/C.mat')
         # self.C_tilde = mat.get('c')
@@ -89,10 +93,10 @@ class torchShiftAAregInit(torch.nn.Module):
         x = torch.einsum('NdM,dM->NM', S_shift, self.A_F)
         return x
 
-    def fit(self, verbose=False, return_loss=False, stopper = ChangeStopper(alpha=1/1000)):
+    def fit(self, verbose=False, return_loss=False, stopper = ChangeStopper(alpha=1/1000), return_init = True):
         optimizer = Adam(self.parameters(), lr=0.05)
         scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.9, patience=5)
-
+        stopper.reset()
         # Convergence criteria
         running_loss = []
         while not stopper.trigger():
@@ -131,7 +135,14 @@ class torchShiftAAregInit(torch.nn.Module):
         output = self.forward()
         self.recon = torch.fft.ifft(output)
 
-        return C, S, tau
+        return_list = [C, S, tau]
+        if return_loss:
+            return_list.append(running_loss)
+        if return_init:
+            return_list.append(self.C_init)
+            return_list.append(self.S_init)
+            
+        return return_list
 
 if __name__ == "__main__":
     import numpy as np
