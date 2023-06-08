@@ -6,20 +6,20 @@ from helpers.data import X_clean
 import matplotlib.pyplot as plt
 
 class NMF(torch.nn.Module):
-    def __init__(self, X, rank, alpha=1e-9):
+    def __init__(self, X, rank, alpha=1e-9, lr=0.5, patience=5, factor=0.9):
         super().__init__()
 
         n_row, n_col = X.shape
         self.softplus = torch.nn.Softplus()
         self.lossfn = frobeniusLoss(torch.tensor(X))
-        self.stopper = ChangeStopper(alpha=alpha)
+        self.stopper = ChangeStopper(alpha=alpha, patience=patience+2)
 
         # Initialization of Tensors/Matrices a and b with size NxR and RxM
         self.W = torch.nn.Parameter(torch.rand(n_row, rank, requires_grad=True))
         self.H = torch.nn.Parameter(torch.rand(rank, n_col, requires_grad=True))
 
-        self.optim = Adam(self.parameters(), lr=0.3)
-        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optim, mode='min', factor=0.9, patience=5)
+        self.optim = Adam(self.parameters(), lr=lr)
+        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optim, mode='min', factor=factor, patience=patience)
 
     def forward(self):
         WH = torch.matmul(self.softplus(self.W), self.softplus(self.H))
@@ -60,7 +60,7 @@ class NMF(torch.nn.Module):
 
 
 class MVR_NMF(torch.nn.Module):
-    def __init__(self, X, rank, regularization, alpha=1e-8):
+    def __init__(self, X, rank, regularization, lr=0.2, alpha=1e-8, patience=5, factor=0.9):
         super().__init__()
 
         n_row, n_col = X.shape
@@ -73,9 +73,9 @@ class MVR_NMF(torch.nn.Module):
         self.W = torch.nn.Parameter(torch.rand(n_row, rank, requires_grad=True))
         self.H = torch.nn.Parameter(torch.rand(rank, n_col, requires_grad=True))
 
-        self.optim = Adam(self.parameters(), lr=20)
-        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optim, mode='min', factor=0.9, patience=5)
-        self.stopper = ChangeStopper(alpha=alpha, patience=10)
+        self.optim = Adam(self.parameters(), lr=0.2)
+        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optim, mode='min', factor=factor, patience=patience)
+        self.stopper = ChangeStopper(alpha=alpha, patience=patience+5)
 
     def forward(self):
         WH = torch.matmul(self.softmax(self.W), self.softplus(self.H))
