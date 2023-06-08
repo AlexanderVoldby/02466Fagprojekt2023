@@ -4,13 +4,16 @@ from helpers.callbacks import ChangeStopper
 from helpers.losses import frobeniusLoss
 from helpers.losses import ShiftNMFLoss
 
+import torchAA
+
 import scipy.io
 import time
 
-class torchShiftAA(torch.nn.Module):
-    def __init__(self, X, rank, alpha=1e-9, lr = 10, factor = 0.9, patience = 5):
-        super(torchShiftAA, self).__init__()
+class torchShiftAAregInit(torch.nn.Module):
+    def __init__(self, X, rank, shift_constraint = 100):
+        super(torchShiftAAregInit, self).__init__()
 
+        self.shift_constraint = shift_constraint
         # Shape of Matrix for reproduction
         N, M = X.shape
         self.N, self.M = N, M
@@ -33,18 +36,27 @@ class torchShiftAA(torch.nn.Module):
         # self.C_tilde = torch.nn.Parameter(torch.randn(rank, N, requires_grad=True,dtype=torch.double)*3)
         # self.S_tilde = torch.nn.Parameter(torch.randn(N, rank, requires_grad=True, dtype=torch.double)*3)
         
+        AA = torchAA.torchAA(X, rank)
+        AA.fit(verbose=True)
         
-        mat = scipy.io.loadmat('helpers/PCHA/C.mat')
-        self.C_tilde = mat.get('c')
-        self.C_tilde = torch.tensor(self.C_tilde, requires_grad=True, dtype=torch.double)
-        self.C_tilde = torch.nn.Parameter(self.C_tilde.T)
+        print('\n initialized C and S \n')
+        self.C_tilde, self.S_tilde = AA.C, AA.S
         
-        mat = scipy.io.loadmat('helpers/PCHA/S.mat')
-        self.S_tilde = mat.get('s')
-        self.S_tilde = torch.tensor(self.S_tilde, requires_grad=True, dtype=torch.double)
-        self.S_tilde = torch.nn.Parameter(self.S_tilde.T)
+        self.C_init, self.S_init = self.softmax(self.C_tilde).detach().numpy(), self.softmax(self.S_tilde).detach().numpy()
+        
+        # mat = scipy.io.loadmat('helpers/PCHA/C.mat')
+        # self.C_tilde = mat.get('c')
+        # self.C_tilde = torch.tensor(self.C_tilde, requires_grad=True, dtype=torch.double)
+        self.C_tilde = torch.nn.Parameter(self.C_tilde)
+        
+        # mat = scipy.io.loadmat('helpers/PCHA/S.mat')
+        # self.S_tilde = mat.get('s')
+        # self.S_tilde = torch.tensor(self.S_tilde, requires_grad=True, dtype=torch.double)
+        self.S_tilde = torch.nn.Parameter(self.S_tilde)
         
         self.tau_tilde = torch.nn.Parameter(torch.zeros(N, rank, requires_grad=True, dtype=torch.double))
+        self.tau_tilde = torch.nn.Parameter(torch.randn(N, rank, requires_grad=True, dtype=torch.double)*100)
+        
 
         self.C = lambda:self.softmax(self.C_tilde).type(torch.cdouble)
         self.S = lambda:self.softmax(self.S_tilde).type(torch.cdouble)
@@ -52,10 +64,8 @@ class torchShiftAA(torch.nn.Module):
         #self.tau = lambda: torch.round(self.tau_tilde)
         self.tau = lambda: self.tau_tilde
 
-        self.optimizer = Adam(self.parameters(), lr=lr)
-        self.stopper = ChangeStopper(alpha=alpha, patience=patience+5)
-        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=factor, patience=patience)
-
+    # def tau(self):
+    #     return torch.zeros(N, rank)
 
     def forward(self):
         # Implementation of shift AA.
@@ -85,12 +95,16 @@ class torchShiftAA(torch.nn.Module):
         x = torch.einsum('NdM,dM->NM', S_shift, self.A_F)
         return x
 
-    def fit(self, verbose=False, return_loss=False, stopper = ChangeStopper(alpha=1/1000)):
+    def fit(self, verbose=False, return_loss=False, stopper = ChangeStopper(alpha=1/1000), return_init = True):
+        optimizer = Adam(self.parameters(), lr=0.3)
+        scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.9, patience=5)
+        stopper.reset()
         # Convergence criteria
         running_loss = []
         while not stopper.trigger():
             # zero optimizer gradient
-            self.optimizer.zero_grad()
+            
+            optimizer.zero_grad()
 
             # forward
             output = self.forward()
@@ -101,7 +115,7 @@ class torchShiftAA(torch.nn.Module):
 
             # Update A and B
             optimizer.step()
-            # scheduler.step(loss)
+            scheduler.step(loss)
             # append loss for graphing
             running_loss.append(loss.item())
 
@@ -111,6 +125,7 @@ class torchShiftAA(torch.nn.Module):
             # print loss
             if verbose:
                 print(f"epoch: {len(running_loss)}, Loss: {1-loss.item()}", end="\r")
+
         
         C = self.softmax(self.C_tilde)
         S = self.softmax(self.S_tilde)
@@ -122,7 +137,14 @@ class torchShiftAA(torch.nn.Module):
         output = self.forward()
         self.recon = torch.fft.ifft(output)
 
-        return C, S, tau
+        return_list = [C, S, tau]
+        if return_loss:
+            return_list.append(running_loss)
+        if return_init:
+            return_list.append(self.C_init)
+            return_list.append(self.S_init)
+            
+        return return_list
 
 if __name__ == "__main__":
     import numpy as np
@@ -135,7 +157,7 @@ if __name__ == "__main__":
     N, M = X.shape
     rank = 3
     D = rank
-    AA = torchShiftAA(X, rank)
+    AA = torchShiftAAregInit(X, rank)
     print("test")
     C,S, tau = AA.fit(verbose=True)
 

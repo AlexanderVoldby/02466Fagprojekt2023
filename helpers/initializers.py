@@ -64,6 +64,24 @@ def FurthestSum(K, noc, i, exclude=[]):
             index[ind_t] = False
     return i
 
+def init_s(X, C, noc):
+     
+    U = range(X.shape[0])
+    
+    XC = np.matmul(X, C)
+    XCtX = np.dot(XC.T, X[:, U])
+    CtXtXC = np.dot(XC.T, XC)
+    S = -np.log(np.random.rand(noc, len(U)))
+    S = S / (np.ones((noc, 0)) * np.sum(S, 0))
+    SSt = np.dot(S, S.T)
+
+    SST = np.sum(np.sum(X[:, U] * X[:, U]))
+
+    SSE = SST - 2 * np.sum(XCtX * S) + np.sum(CtXtXC * SSt)
+    # S, SSE, muS, SSt = Supdate(S, XCtX, CtXtXC, muS, SST, SSE, 25)
+
+
+
 if __name__ == "__main__":
     print("This is a helper file, import it to use it.")
     import pandas as pd
@@ -72,3 +90,10 @@ if __name__ == "__main__":
     X = mat.get('xData')
     
     print(FurthestSum(X.T, 3, 0))
+    
+    n_col = X.shape[1]
+    cols = FurthestSum(X, 3, 0)
+    C = np.zeros((n_col, 3))
+    for i in cols:
+        C[i] = 10
+    print(init_s(X, C, 3))
