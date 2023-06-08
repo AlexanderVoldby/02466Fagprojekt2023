@@ -10,7 +10,7 @@ import scipy.io
 import time
 
 class torchShiftAAregInit(torch.nn.Module):
-    def __init__(self, X, rank, shift_constraint = 100):
+    def __init__(self, X, rank, shift_constraint = 100, alpha=1e-9, lr = 0.3, factor = 0.9, patience = 5):
         super(torchShiftAAregInit, self).__init__()
 
         self.shift_constraint = shift_constraint
@@ -36,7 +36,7 @@ class torchShiftAAregInit(torch.nn.Module):
         # self.C_tilde = torch.nn.Parameter(torch.randn(rank, N, requires_grad=True,dtype=torch.double)*3)
         # self.S_tilde = torch.nn.Parameter(torch.randn(N, rank, requires_grad=True, dtype=torch.double)*3)
         
-        AA = torchAA.torchAA(X, rank)
+        AA = torchAA.torchAA(X, rank, lr=lr, factor=factor, patience=patience, alpha=alpha)
         AA.fit(verbose=True)
         
         print('\n initialized C and S \n')
@@ -55,7 +55,7 @@ class torchShiftAAregInit(torch.nn.Module):
         self.S_tilde = torch.nn.Parameter(self.S_tilde)
         
         self.tau_tilde = torch.nn.Parameter(torch.zeros(N, rank, requires_grad=True, dtype=torch.double))
-        self.tau_tilde = torch.nn.Parameter(torch.randn(N, rank, requires_grad=True, dtype=torch.double)*100)
+        # self.tau_tilde = torch.nn.Parameter(torch.randn(N, rank, requires_grad=True, dtype=torch.double)*100)
         
 
         self.C = lambda:self.softmax(self.C_tilde).type(torch.cdouble)
@@ -64,6 +64,10 @@ class torchShiftAAregInit(torch.nn.Module):
         #self.tau = lambda: torch.round(self.tau_tilde)
         self.tau = lambda: self.tau_tilde
 
+        self.stopper = ChangeStopper(alpha=alpha, patience=patience)
+        self.optimizer = Adam(self.parameters(), lr=lr)
+        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=factor, patience=patience-2)
+        
     # def tau(self):
     #     return torch.zeros(N, rank)
 
@@ -95,16 +99,15 @@ class torchShiftAAregInit(torch.nn.Module):
         x = torch.einsum('NdM,dM->NM', S_shift, self.A_F)
         return x
 
-    def fit(self, verbose=False, return_loss=False, stopper = ChangeStopper(alpha=1/1000), return_init = True):
-        optimizer = Adam(self.parameters(), lr=0.3)
-        scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.9, patience=5)
-        stopper.reset()
+    def fit(self, verbose=False, return_loss=False, return_init = False):
+        self.stopper.reset()
+        
         # Convergence criteria
         running_loss = []
-        while not stopper.trigger():
+        while not self.stopper.trigger():
             # zero optimizer gradient
             
-            optimizer.zero_grad()
+            self.optimizer.zero_grad()
 
             # forward
             output = self.forward()
@@ -114,13 +117,13 @@ class torchShiftAAregInit(torch.nn.Module):
             loss.backward()
 
             # Update A and B
-            optimizer.step()
-            scheduler.step(loss)
+            self.optimizer.step()
+            self.scheduler.step(loss)
             # append loss for graphing
             running_loss.append(loss.item())
 
             # count with early stopping
-            stopper.track_loss(loss)
+            self.stopper.track_loss(loss)
 
             # print loss
             if verbose:
