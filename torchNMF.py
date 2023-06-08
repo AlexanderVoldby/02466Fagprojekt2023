@@ -6,20 +6,20 @@ from helpers.data import X_clean
 import matplotlib.pyplot as plt
 
 class NMF(torch.nn.Module):
-    def __init__(self, X, rank, alpha=1e-9):
+    def __init__(self, X, rank, alpha=1e-9, lr = 10, factor = 0.9, patience = 5):
         super().__init__()
 
         n_row, n_col = X.shape
         self.softplus = torch.nn.Softplus()
         self.lossfn = frobeniusLoss(torch.tensor(X))
-        self.stopper = ChangeStopper(alpha=alpha)
 
         # Initialization of Tensors/Matrices a and b with size NxR and RxM
         self.W = torch.nn.Parameter(torch.rand(n_row, rank, requires_grad=True))
         self.H = torch.nn.Parameter(torch.rand(rank, n_col, requires_grad=True))
 
-        self.optim = Adam(self.parameters(), lr=0.3)
-        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optim, mode='min', factor=0.1, patience=5)
+        self.optimizer = Adam(self.parameters(), lr=lr)
+        self.stopper = ChangeStopper(alpha=alpha, patience=patience+5)
+        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=factor, patience=patience)
 
     def forward(self):
         WH = torch.matmul(self.softplus(self.W), self.softplus(self.H))
@@ -29,7 +29,7 @@ class NMF(torch.nn.Module):
         running_loss = []
         while not self.stopper.trigger():
             # zero optimizer gradient
-            self.optim.zero_grad()
+            self.optimizer.zero_grad()
 
             # forward
             output = self.forward()
@@ -40,7 +40,7 @@ class NMF(torch.nn.Module):
             loss.backward()
 
             # Update W and H
-            self.optim.step()
+            self.optimizer.step()
             self.scheduler.step(loss)
 
             running_loss.append(loss.item())
