@@ -15,8 +15,8 @@ class NMF(torch.nn.Module):
         self.stopper = ChangeStopper(alpha=alpha, patience=patience+2)
 
         # Initialization of Tensors/Matrices a and b with size NxR and RxM
-        self.W = torch.nn.Parameter(torch.rand(n_row, rank, requires_grad=True))
-        self.H = torch.nn.Parameter(torch.rand(rank, n_col, requires_grad=True))
+        self.W = torch.nn.Parameter(torch.randn(n_row, rank, requires_grad=True)*3)
+        self.H = torch.nn.Parameter(torch.randn(rank, n_col, requires_grad=True)*3)
 
         self.optim = Adam(self.parameters(), lr=lr)
         self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optim, mode='min', factor=factor, patience=patience)
@@ -73,7 +73,7 @@ class MVR_NMF(torch.nn.Module):
         self.W = torch.nn.Parameter(torch.rand(n_row, rank, requires_grad=True))
         self.H = torch.nn.Parameter(torch.rand(rank, n_col, requires_grad=True))
 
-        self.optim = Adam(self.parameters(), lr=0.2)
+        self.optim = Adam(self.parameters(), lr=lr)
         self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optim, mode='min', factor=factor, patience=patience)
         self.stopper = ChangeStopper(alpha=alpha, patience=patience+5)
 
@@ -116,7 +116,7 @@ class MVR_NMF(torch.nn.Module):
 
 if __name__ == "__main__":
     from helpers.callbacks import explained_variance
-    mvr_nmf = MVR_NMF(X_clean, 6, regularization=0.01)
+    mvr_nmf = MVR_NMF(X_clean, 6, regularization=1e-6)
     W, H = mvr_nmf.fit(verbose=True)
     print(f"Explained variance MVR_NMF: {explained_variance(X_clean, mvr_nmf.forward().detach().numpy())}")
     plt.figure()

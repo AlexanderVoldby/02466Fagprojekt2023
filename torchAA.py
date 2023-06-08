@@ -1,13 +1,13 @@
 import torch
 from torch.optim import Adam, lr_scheduler
-from helpers.callbacks import ChangeStopper, RelativeStopper
+from helpers.callbacks import ChangeStopper
 from helpers.losses import frobeniusLoss
 from helpers.initializers import FurthestSum
 
 import scipy.io
 
 class torchAA(torch.nn.Module):
-    def __init__(self, X, rank, alpha=1e-9, lr = 10, factor = 0.9, patience = 5):
+    def __init__(self, X, rank, alpha=1e-9, lr = 0.2, factor = 0.9, patience = 5):
         super(torchAA, self).__init__()
 
         # Shape of Matrix for reproduction
@@ -17,8 +17,6 @@ class torchAA(torch.nn.Module):
         self.softmax = torch.nn.Softmax(dim=1)
         self.lossfn = frobeniusLoss(self.X)
         Furthest = False
-        #TODO Initialize as double
-        # Enten drop Furthestsum eller drop gradienter på C indtil S er konvergeret på initialiseringen
         if Furthest:
             noc = 10
             power = 1
@@ -34,17 +32,6 @@ class torchAA(torch.nn.Module):
         else:
             self.C = torch.nn.Parameter(torch.randn(rank, N, requires_grad=True, dtype=torch.double)*3)
             self.S = torch.nn.Parameter(torch.randn(N, rank, requires_grad=True, dtype=torch.double)*3)
-        
-        # mat = scipy.io.loadmat('helpers/PCHA/C.mat')
-        # self.C = mat.get('c')
-        # self.C = torch.tensor(self.C, requires_grad=True, dtype=torch.double)
-        # self.C = torch.nn.Parameter(self.C.T)
-        
-        # mat = scipy.io.loadmat('helpers/PCHA/S.mat')
-        # self.S = mat.get('s')
-        # self.S = torch.tensor(self.S, requires_grad=True, dtype=torch.double)
-        # self.S = torch.nn.Parameter(self.S.T)
-        
         
         self.optimizer = Adam(self.parameters(), lr=lr)
         self.stopper = ChangeStopper(alpha=alpha, patience=patience+2)
@@ -88,7 +75,7 @@ class torchAA(torch.nn.Module):
 
             # print loss
             if verbose:
-                print(f"epoch: {len(running_loss)}, Loss: {1-loss.item()}", end='\r')
+                print(f"Explained variance: {len(running_loss)}, Loss: {1-loss.item()}", end='\r')
 
         C = self.softmax(self.C)
         S = self.softmax(self.S)
