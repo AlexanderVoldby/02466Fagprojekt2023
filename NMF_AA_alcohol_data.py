@@ -2,16 +2,19 @@ import scipy.io
 import numpy as np
 from torchNMF import NMF
 from torchAA import torchAA
-from helpers.callbacks import explained_variance, ChangeStopper, plot_data
+from helpers.callbacks import explained_variance, plot_data, train_n_times
 import matplotlib.pyplot as plt
 
 label_colors = {}
 def component_plot(components, labels, title):
     global label_colors
+    pos_colors = ["r", "g", "b"]
+    k = 0
     for label in labels:
         if label not in label_colors:
-            color = np.random.rand(3)
+            color = pos_colors[k]
             label_colors[label] = color
+            k += 1
     x = np.arange(components.shape[0])
     plt.figure(figsize=(10, 6))  # Adjust the figure size as per your preference
     plt.bar(x, components[:, 0], label=labels[0],
@@ -77,19 +80,15 @@ if exp_var:
     plt.legend()
     plt.show()
 
-nmf = NMF(X, 3, alpha=1e-9)
-aa = torchAA(X, 3, alpha=1e-9)
-W, H = nmf.fit(verbose=True)
-n_iterations = 10
-losses = []
-params = []
-for i in range(n_iterations):
-    aa = torchAA(X, 3, alpha=1e-9)
-    C, S, loss = aa.fit(verbose=True, return_loss=True)
-    losses.append(loss)
-    params.append((C, S))
-C, S = params[np.argmin(losses)]
+nmf_params, nmf_loss = train_n_times(5, NMF, X, 3, lr=0.2)
+aa_params, aa_loss = train_n_times(10, torchAA, X, 3, lr=0.2)
+W, H = nmf_params
+C, S = aa_params
 aa_components = np.matmul(C, X)
+np.savetxt("W_alcohol.txt", W)
+np.savetxt("H_alcohol.txt", H)
+np.savetxt("C_alcohol.txt", C)
+np.savetxt("S_alcohol.txt", S)
 
 # Find the alcohols that the components correspond to with least squares difference
 labels = [[100, 0, 0], [0, 100, 0], [0, 0, 100]]
