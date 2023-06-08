@@ -2,8 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from torchAA import torchAA
 from torchNMF import NMF
+
+#Create data
 # Define random sources, mixings and shifts; H, W and tau
-N, M, d = 10, 10000, 3
+N, M, d = 30, 10000, 3
 Fs = 1000  # The sampling frequency we use for the simulation
 t0 = 10    # The half-time interval we look at
 t = np.arange(-t0, t0, 1/Fs)  # the time samples
@@ -33,7 +35,15 @@ def shift_dataset(W, H, tau):
     return V
 
 # Random mixings:
-W = np.random.rand(N, d)
+W = np.random.dirichlet(np.ones(d), N)
+W = np.append(W, [[1,0,0]], axis=0)
+W = np.append(W, [[0,1,0]], axis=0)
+W = np.append(W, [[0,0,1]], axis=0)
+N = N+3
+print(W.shape)
+print(W)
+
+#W = np.random.rand(N, d)
 # Random gaussian shifts
 tau = np.zeros(shape=(N, d))
 #tau = np.random.randint(0, 1000, size=(N, d))
@@ -50,43 +60,18 @@ plt.show()
 
 X = shift_dataset(W, H, tau)
 
+if __name__ == '__main__':
+    plt.figure()
+    for signal in X:
+        plt.plot(signal.real)
+    plt.title("Dataset build from mixing of the three sources")
+    plt.show()
 
-plt.figure()
-for signal in X:
-    plt.plot(signal.real)
-plt.title("Dataset build from mixing of the three sources")
-plt.show()
-
-
-AA = torchAA(X, 3)
-C, S,loss = AA.fit(verbose=True, return_loss=True)
-print("loss1")
-print(loss[-1])
-CX = np.matmul(C, X)
-recon = np.matmul(S, CX)
-
-for signal in CX:
-    plt.plot(signal)
-plt.title("Found components AA1")
-plt.show()
-
-plt.plot(recon[1])
-plt.plot(X[1])
-plt.title("Reconstruction of first sample vs first sample (AA1)")
-plt.show()
-
-
-
-# nmf = NMF(X, 3)
-# W, H = nmf.fit(verbose=True)
-# recon = np.matmul(W, H)
-
-# for signal in H:
-#     plt.plot(signal)
-# plt.title("Found components NMF")
-# plt.show()
-
-# plt.plot(recon[1])
-# plt.plot(X[1])
-# plt.title("Reconstruction of first sample vs first sample")
-# plt.show()
+    plt.figure()
+    plt.imshow(W, aspect='auto', interpolation="none")
+    plt.colorbar()
+    ax = plt.gca()
+    ax.set_xticks(np.arange(0, d, 1))
+    ax.set_yticks(np.arange(0, N, 1))
+    plt.title("W - The mixings")
+    plt.show()

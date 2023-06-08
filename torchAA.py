@@ -7,6 +7,7 @@ from helpers.initializers import FurthestSum
 import scipy.io
 
 class torchAA(torch.nn.Module):
+<<<<<<< HEAD
     def __init__(self, X, rank, alpha=1e-9, lr = 0.2, factor = 0.9, patience = 5):
         super(torchAA, self).__init__()
 
@@ -34,8 +35,8 @@ class torchAA(torch.nn.Module):
             self.S = torch.nn.Parameter(torch.randn(N, rank, requires_grad=True, dtype=torch.double)*3)
         
         self.optimizer = Adam(self.parameters(), lr=lr)
-        self.stopper = ChangeStopper(alpha=alpha, patience=patience+2)
-        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=factor, patience=patience)
+        self.stopper = ChangeStopper(alpha=alpha, patience=patience)
+        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=factor, patience=patience-2)
 
  
     def forward(self):

@@ -59,15 +59,15 @@ axs[2].set_title("Pentanol")
 plt.show()
 
 # Fit NMF and AA 10 times and get an average loss curve for each as well as an average explained variance
-exp_var = False
+exp_var = True
 if exp_var:
     max_components = 7
     aa_explained = []
     nmf_explained = []
     for i in range(max_components):
         print(F"Components: {i+1}")
-        nmf = NMF(X, i+1)
-        aa = torchAA(X, i+1)
+        nmf = NMF(X, i+1, patience=7)
+        aa = torchAA(X, i+1, patience = 7)
         nmf.fit(verbose=True)
         aa.fit(verbose=True)
         nmf_explained.append(explained_variance(X, nmf.forward().detach().numpy()))
