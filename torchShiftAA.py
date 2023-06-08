@@ -118,7 +118,7 @@ class torchShiftAA(torch.nn.Module):
 
         C = C.detach().numpy()
         S = S.detach().numpy()
-        self.tau = lambda: torch.round(self.tau_tilde)
+        #self.tau = lambda: torch.round(self.tau_tilde)
         output = self.forward()
         self.recon = torch.fft.ifft(output)
         if return_loss:
