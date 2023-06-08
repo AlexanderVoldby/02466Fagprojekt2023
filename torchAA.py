@@ -7,7 +7,8 @@ from helpers.initializers import FurthestSum
 import scipy.io
 
 class torchAA(torch.nn.Module):
-    def __init__(self, X, rank, alpha=1e-9, lr = 0.3, factor = 0.9, patience = 5):
+<<<<<<< HEAD
+    def __init__(self, X, rank, alpha=1e-9, lr = 0.2, factor = 0.9, patience = 5):
         super(torchAA, self).__init__()
 
         # Shape of Matrix for reproduction
@@ -16,20 +17,22 @@ class torchAA(torch.nn.Module):
 
         self.softmax = torch.nn.Softmax(dim=1)
         self.lossfn = frobeniusLoss(self.X)
-        
-        self.C = torch.nn.Parameter(torch.randn(rank, N, requires_grad=True, dtype=torch.double)*3)
-        self.S = torch.nn.Parameter(torch.randn(N, rank, requires_grad=True, dtype=torch.double)*3)
-        
-        # mat = scipy.io.loadmat('helpers/PCHA/C.mat')
-        # self.C = mat.get('c')
-        # self.C = torch.tensor(self.C, requires_grad=True, dtype=torch.double)
-        # self.C = torch.nn.Parameter(self.C.T)
-        
-        # mat = scipy.io.loadmat('helpers/PCHA/S.mat')
-        # self.S = mat.get('s')
-        # self.S = torch.tensor(self.S, requires_grad=True, dtype=torch.double)
-        # self.S = torch.nn.Parameter(self.S.T)
-        
+        Furthest = False
+        if Furthest:
+            noc = 10
+            power = 1
+            initial = 0
+            exclude = []
+            cols = FurthestSum(X.T, noc, initial, exclude)
+            self.C = torch.zeros(N, rank)
+            for i in cols:
+                self.C[i] = power
+            self.C = self.C.T
+            self.C = self.C.clone().requires_grad_(True)
+            self.C = torch.nn.Parameter(self.C)
+        else:
+            self.C = torch.nn.Parameter(torch.randn(rank, N, requires_grad=True, dtype=torch.double)*3)
+            self.S = torch.nn.Parameter(torch.randn(N, rank, requires_grad=True, dtype=torch.double)*3)
         
         self.optimizer = Adam(self.parameters(), lr=lr)
         self.stopper = ChangeStopper(alpha=alpha, patience=patience)
@@ -73,7 +76,7 @@ class torchAA(torch.nn.Module):
 
             # print loss
             if verbose:
-                print(f"epoch: {len(running_loss)}, Loss: {1-loss.item()}", end='\r')
+                print(f"Explained variance: {len(running_loss)}, Loss: {1-loss.item()}", end='\r')
 
         C = self.softmax(self.C)
         S = self.softmax(self.S)

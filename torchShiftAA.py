@@ -31,6 +31,8 @@ class torchShiftAA(torch.nn.Module):
         
         self.C_tilde = torch.nn.Parameter(torch.randn(rank, N, requires_grad=True,dtype=torch.double)*3)
         self.S_tilde = torch.nn.Parameter(torch.randn(N, rank, requires_grad=True, dtype=torch.double)*3)
+        self.C_tilde = torch.nn.Parameter(torch.randn(rank, N, requires_grad=True,dtype=torch.double)*3)
+        self.S_tilde = torch.nn.Parameter(torch.randn(N, rank, requires_grad=True, dtype=torch.double)*3)
         
         
         # mat = scipy.io.loadmat('helpers/PCHA/C.mat')
@@ -89,6 +91,7 @@ class torchShiftAA(torch.nn.Module):
         # Convergence criteria
         running_loss = []
         while not self.stopper.trigger():
+        while not self.stopper.trigger():
             # zero optimizer gradient
             self.optimizer.zero_grad()
 
@@ -107,6 +110,7 @@ class torchShiftAA(torch.nn.Module):
 
             # count with early stopping
             self.stopper.track_loss(loss)
+            self.stopper.track_loss(loss)
 
             # print loss
             if verbose:
@@ -118,11 +122,14 @@ class torchShiftAA(torch.nn.Module):
 
         C = C.detach().numpy()
         S = S.detach().numpy()
-        self.tau = lambda: torch.round(self.tau_tilde)
+        #self.tau = lambda: torch.round(self.tau_tilde)
         output = self.forward()
         self.recon = torch.fft.ifft(output)
+        if return_loss:
+            return C, S, tau, running_loss
+        else:
+            return C, S, tau
 
-        return C, S, tau
 
 if __name__ == "__main__":
     import numpy as np
