@@ -6,20 +6,20 @@ from helpers.data import X_clean
 import matplotlib.pyplot as plt
 
 class NMF(torch.nn.Module):
-    def __init__(self, X, rank, alpha=1e-9):
+    def __init__(self, X, rank, alpha=1e-9, patience=5):
         super().__init__()
 
         n_row, n_col = X.shape
         self.softplus = torch.nn.Softplus()
         self.lossfn = frobeniusLoss(torch.tensor(X))
-        self.stopper = ChangeStopper(alpha=alpha)
+        self.stopper = ChangeStopper(alpha=alpha, patience=patience)
 
         # Initialization of Tensors/Matrices a and b with size NxR and RxM
         self.W = torch.nn.Parameter(torch.rand(n_row, rank, requires_grad=True))
         self.H = torch.nn.Parameter(torch.rand(rank, n_col, requires_grad=True))
 
         self.optim = Adam(self.parameters(), lr=0.3)
-        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optim, mode='min', factor=0.1, patience=5)
+        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optim, mode='min', factor=0.9, patience=patience-2)
 
     def forward(self):
         WH = torch.matmul(self.softplus(self.W), self.softplus(self.H))
