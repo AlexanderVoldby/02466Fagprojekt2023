@@ -55,6 +55,8 @@ class torchShiftAAregInit(torch.nn.Module):
         self.S_tilde = torch.nn.Parameter(self.S_tilde)
         
         self.tau_tilde = torch.nn.Parameter(torch.zeros(N, rank, requires_grad=True, dtype=torch.double))
+        self.tau_tilde = torch.nn.Parameter(torch.randn(N, rank, requires_grad=True, dtype=torch.double)*100)
+        
 
         self.C = lambda:self.softmax(self.C_tilde).type(torch.cdouble)
         self.S = lambda:self.softmax(self.S_tilde).type(torch.cdouble)
@@ -94,7 +96,7 @@ class torchShiftAAregInit(torch.nn.Module):
         return x
 
     def fit(self, verbose=False, return_loss=False, stopper = ChangeStopper(alpha=1/1000), return_init = True):
-        optimizer = Adam(self.parameters(), lr=0.05)
+        optimizer = Adam(self.parameters(), lr=0.3)
         scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.9, patience=5)
         stopper.reset()
         # Convergence criteria
