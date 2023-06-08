@@ -17,6 +17,7 @@ def gauss(mu, s, time):
     return 1/(s*np.sqrt(2*np.pi))*np.exp(-1/2*((time-mu)/s)**2)
 
 def shift_dataset(W, H, tau):
+    softplus = torch.nn.Softplus()
     M = H.shape[1]
     W, H, tau = torch.Tensor(W), torch.Tensor(H), torch.Tensor(tau)
     # Get half of the frequencies
@@ -29,7 +30,7 @@ def shift_dataset(W, H, tau):
     # Construct the datamatrix by shifting and mixing
     f = torch.arange(0, M) / M
     omega = torch.exp(-1j * 2 * torch.pi * torch.einsum('Nd,M->NdM', tau, f))
-    Wf = torch.einsum('Nd,NdM->NdM', W, omega)
+    Wf = torch.einsum('Nd,NdM->NdM', softplus(W), omega)
     # Broadcast Wf and H together
     Vf = torch.einsum('NdM,dM->NM', Wf, Hft)
     V = torch.fft.ifft(Vf)
@@ -37,9 +38,9 @@ def shift_dataset(W, H, tau):
 
 # Random mixings:
 # initialiser med dirichlet fordeling og sæt parameter til 1
-W = np.random.rand(N, d)
+W = np.random.randn(N, d)
 # Random gaussian shifts
-tau = np.random.randint(-1000, 1000, size=(N, d))
+tau = np.random.randn(N, d)
 # Purely positive underlying signals. I define them as 3 gaussian peaks with random mean and std.
 mean = [40, 300, 700]
 std = [10, 20, 50]
@@ -63,7 +64,7 @@ best_model = models[np.argmin(shiftnmf_loss)]
 best_W, best_H, best_tau = params[np.argmin(shiftnmf_loss)]
 
 plot_data(best_H, "Signals determined by shiftNMF")
-plot_data(best_model.recon.detach().numpy(), "Dataset reconstructed by shiftNMF")
+plot_data(np.fft.ifft(best_model.forward().detach().numpy()), "Dataset reconstructed by shiftNMF")
 print("Tau")
 print(best_tau)
 
