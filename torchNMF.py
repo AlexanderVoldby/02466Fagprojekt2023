@@ -60,7 +60,7 @@ class NMF(torch.nn.Module):
 
 
 class MVR_NMF(torch.nn.Module):
-    def __init__(self, X, rank, regularization, lr=0.2, alpha=1e-8, patience=5, factor=0.9):
+    def __init__(self, X, rank, regularization, lr=20, alpha=1e-8, patience=5, factor=0.9):
         super().__init__()
 
         n_row, n_col = X.shape
@@ -103,7 +103,7 @@ class MVR_NMF(torch.nn.Module):
 
             # print loss
             if verbose:
-                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}", end='\r')
+                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}")
 
         W = self.softmax(self.W).detach().numpy()
         H = self.softplus(self.H).detach().numpy()
