@@ -27,6 +27,28 @@ def explained_variance(original_data, reconstructed_data):
 
     return explained_variance
 
+
+def train_n_times(number, object, data, components, **kwargs):
+    """
+    Trains "number" versions on Instance and return the parameters of the one with the lowest loss
+    :param object: An algorithm class, which returns a loss.
+    :param data: The dataset to fit the algorithm on
+    :param components: The number of latent components to use
+    :param number: The number of versions to train
+    :param **kwargs: The keyword arguments that you want to pass to the class instance upon initialisation.
+    These are the hyperparameters for the model, learning rate, patience, alpha etc.
+    :return: The parameters and running loss of the best model
+    """
+    params = []
+    losses = []
+    for i in range(number):
+        model = object(data, components, **kwargs)
+        returns = model.fit(verbose=True, return_loss=True)
+        losses.append(returns[-1]) # Loss is always the last element returned
+        params.append(returns[:len(returns)-1])
+    best_params = params[np.argmin(losses)]
+    return best_params, np.min(losses)
+
 #Superclass for stopping criteria
 class Stopper:
     def __init__(self) -> None:
