@@ -4,8 +4,7 @@ from helpers.callbacks import ChangeStopper
 from helpers.losses import frobeniusLoss
 from helpers.losses import ShiftNMFLoss
 
-import scipy.io
-import time
+
 
 class torchShiftAA(torch.nn.Module):
     def __init__(self, X, rank, alpha=1e-9, lr = 10, factor = 0.9, patience = 5):

@@ -4,7 +4,6 @@ from helpers.callbacks import ChangeStopper
 from helpers.losses import frobeniusLoss
 from helpers.initializers import FurthestSum
 
-import scipy.io
 
 class torchAA(torch.nn.Module):
     def __init__(self, X, rank, alpha=1e-9, lr = 0.2, factor = 0.9, patience = 5):

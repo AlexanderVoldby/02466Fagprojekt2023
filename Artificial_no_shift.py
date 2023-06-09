@@ -1,7 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
-from torchAA import torchAA
-from torchNMF import NMF
 
 #Create data
 # Define random sources, mixings and shifts; H, W and tau
@@ -40,8 +37,6 @@ W = np.append(W, [[1,0,0]], axis=0)
 W = np.append(W, [[0,1,0]], axis=0)
 W = np.append(W, [[0,0,1]], axis=0)
 N = N+3
-print(W.shape)
-print(W)
 
 #W = np.random.rand(N, d)
 # Random gaussian shifts
@@ -52,15 +47,18 @@ mean = [40, 300, 700]
 std = [10, 20, 7]
 t = np.arange(0, 1000, 0.1)
 H = np.array([gauss(m, s, t) for m, s in list(zip(mean, std))])
-plt.figure()
-for signal in H:
-    plt.plot(signal)
-plt.title("Original signals")
-plt.show()
 
 X = shift_dataset(W, H, tau)
 
 if __name__ == '__main__':
+    import matplotlib.pyplot as plt
+    from torchAA import torchAA
+    from torchNMF import NMF
+    plt.figure()
+    for signal in H:
+        plt.plot(signal)
+    plt.title("Original signals")
+    plt.show()
     plt.figure()
     for signal in X:
         plt.plot(signal.real)
