@@ -31,8 +31,6 @@ class torchShiftAA(torch.nn.Module):
         
         self.C_tilde = torch.nn.Parameter(torch.randn(rank, N, requires_grad=True,dtype=torch.double)*3)
         self.S_tilde = torch.nn.Parameter(torch.randn(N, rank, requires_grad=True, dtype=torch.double)*3)
-        self.C_tilde = torch.nn.Parameter(torch.randn(rank, N, requires_grad=True,dtype=torch.double)*3)
-        self.S_tilde = torch.nn.Parameter(torch.randn(N, rank, requires_grad=True, dtype=torch.double)*3)
         
         
         # mat = scipy.io.loadmat('helpers/PCHA/C.mat')
@@ -80,17 +78,16 @@ class torchShiftAA(torch.nn.Module):
 
         # archetypes back shifted
         #A_shift = torch.einsum('dM,NdM->NdM', self.A_F.double(), omega.double())
-        S_shift = torch.einsum('Nd,NdM->NdM', self.S(), omega) 
+        self.S_shift = torch.einsum('Nd,NdM->NdM', self.S(), omega) 
 
         # Reconstruction
-        x = torch.einsum('NdM,dM->NM', S_shift, self.A_F)
+        x = torch.einsum('NdM,dM->NM', self.S_shift, self.A_F)
         return x
 
     def fit(self, verbose=False, return_loss=False):
         self.stopper.reset()
         # Convergence criteria
         running_loss = []
-        while not self.stopper.trigger():
         while not self.stopper.trigger():
             # zero optimizer gradient
             self.optimizer.zero_grad()
