@@ -60,10 +60,11 @@ class NMF(torch.nn.Module):
 
 
 class MVR_NMF(torch.nn.Module):
-    def __init__(self, X, rank, regularization, lr=20, alpha=1e-8, patience=5, factor=0.9):
+    def __init__(self, X, rank, regularization=1e-9, normalization=2, lr=20, alpha=1e-8, patience=5, factor=0.9):
         super().__init__()
 
         n_row, n_col = X.shape
+        self.normalization = normalization
         self.rank = rank
         self.softmax = torch.nn.Softmax(dim=1) # dim = 1 is on the rows
         self.lossfn = VolLoss(torch.tensor(X), regularization)
@@ -78,7 +79,14 @@ class MVR_NMF(torch.nn.Module):
         self.stopper = ChangeStopper(alpha=alpha, patience=patience+5)
 
     def forward(self):
-        WH = torch.matmul(self.softmax(self.W), self.softplus(self.H))
+        if self.normalization == 2:
+            norm = torch.linalg.vector_norm(self.W, dim=1)
+            exp_norm = norm.unsqueeze(0).expand(self.W.size(1), -1).T
+            WH = torch.matmul(self.W / exp_norm, self.softplus(self.H))
+        elif self.normalization == 1:
+            WH = torch.matmul(self.softmax(self.W), self.softplus(self.H))
+        else:
+            raise ValueError(f"{self.normalization} is not a currently supported normalization technique (must be 1 or 2)")
         return WH
 
     def fit(self, verbose=False, return_loss=False):
@@ -116,8 +124,8 @@ class MVR_NMF(torch.nn.Module):
 
 if __name__ == "__main__":
     from helpers.callbacks import explained_variance
-    mvr_nmf = MVR_NMF(X_clean, 6, regularization=1e-6)
-    W, H = mvr_nmf.fit(verbose=True)
+    mvr_nmf = MVR_NMF(X_clean, 6, regularization=1e-10, normalization=2)
+    W, H = mvr_nmf.fit()
     print(f"Explained variance MVR_NMF: {explained_variance(X_clean, mvr_nmf.forward().detach().numpy())}")
     plt.figure()
     for vec in H:
