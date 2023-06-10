@@ -70,7 +70,7 @@ def train_n_times(number, object, data, components, **kwargs):
         print(f"Training model {i+1}/{number}")
         model = object(data, components, **kwargs)
         returns = model.fit(verbose=True, return_loss=True)
-        losses.append(returns[-1]) # Loss is always the last element returned
+        losses.append(returns[-1][-1]) # Loss is always the last element returned
         params.append(returns[:len(returns)-1])
     best_params = params[np.argmin(losses)]
     return best_params, np.min(losses)

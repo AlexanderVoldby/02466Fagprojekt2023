@@ -9,8 +9,6 @@ def AA_train(i, X, D, results, kwargs):
     AA = torchAA(X, D, **kwargs)
     C, S, loss = AA.fit(verbose=True, return_loss=True)
     results.put((i, AA, loss[-1]))
-    
-
 
 
 if __name__ == '__main__':
