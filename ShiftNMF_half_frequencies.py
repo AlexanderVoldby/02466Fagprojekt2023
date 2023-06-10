@@ -26,20 +26,6 @@ class ShiftNMF(torch.nn.Module):
         self.stopper = ChangeStopper(alpha=alpha, patience=patience + 5)
         self.optim = Adam(self.parameters(), lr=lr)
         self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optim, mode='min', factor=factor, patience=patience)
-        self.lossfn = frobeniusLoss(torch.fft.fft(self.X))
-        
-        # Initialization of Tensors/Matrices a and b with size NxR and RxM
-        # Introduce regularization on W with min volume by making W have unit norm by dividing through
-        # with the norm of W
-        self.W = torch.nn.Parameter(torch.rand(self.N, rank, requires_grad=True, dtype=torch.double))
-        self.H = torch.nn.Parameter(torch.rand(rank, self.M, requires_grad=True, dtype=torch.double))
-        # Init tau between -1 and 1
-        self.tau = torch.nn.Parameter(torch.zeros(self.N, self.rank, requires_grad=True))
-        # Tau is then cast to [-shift_constraint, shift_constraint]
-        # self.tau = lambda: torch.tanh(self.tau_tilde) * self.shift_constraint
-        self.optimizer = Adam(self.parameters(), lr=lr)
-        self.stopper = ChangeStopper(alpha=alpha, patience=patience+5)
-        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=factor, patience=patience)
 
     def forward(self):
         # Get half of the frequencies

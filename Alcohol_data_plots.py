@@ -1,7 +1,7 @@
 import scipy.io
 import numpy as np
 from sklearn.feature_selection import mutual_info_regression
-from helpers.callbacks import explained_variance, plot_data
+from helpers.callbacks import explained_variance, plot_data, NMI
 import matplotlib.pyplot as plt
 
 
@@ -54,7 +54,6 @@ def sort_rows_by_squared_error(true_matrix, other_matrix):
 # load data from .MAT file
 mat = scipy.io.loadmat('helpers/data/NMR_mix_DoE.mat')
 
-# Get X and Labels. Probably different for the other dataset, but i didn't check :)
 X = mat.get('xData')
 targets = mat.get('yData')
 target_labels = mat.get('yLabels')
@@ -82,6 +81,10 @@ plot_latent_components(aa_features, target_labels, "AA latent components")
 
 W_fraction = (W / np.sum(W, axis=1).reshape(W.shape[0], 1)) * 100
 S_fraction = (S / np.sum(S, axis=1).reshape(S.shape[0], 1)) * 100
+
+print("Noralized mutual information between mixings and ground truth")
+print(f"NMF: {NMI(targets/100, W_fraction/100)}")
+print(f"AA: {NMI(targets/100, S_fraction/100)}")
 
 component_plot(W_fraction, target_labels, "Concentrations estimated with NMF")
 component_plot(S_fraction, target_labels, "Concentrations estimated with AA")
