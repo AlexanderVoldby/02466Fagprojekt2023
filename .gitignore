@@ -2,6 +2,7 @@
 /test.ipynb
 /__pychache__
 /helpers/__pychache__
+/train_weights
 *.m
 *.parquet
 *.pyc
