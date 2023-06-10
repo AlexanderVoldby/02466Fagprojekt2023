@@ -121,7 +121,7 @@ class ChangeStopper(Stopper):
     def reset(self):
         self.ploss = None
         self.loss = None
-        self.counter = None
+        self.counter = 0
 
 class ConvergenceCriterion:
     def __init__(self, x, convergence_threshold, num_epochs_convergence):

@@ -34,7 +34,7 @@ class ShiftNMF(torch.nn.Module):
         self.W = torch.nn.Parameter(torch.rand(self.N, rank, requires_grad=True, dtype=torch.double))
         self.H = torch.nn.Parameter(torch.rand(rank, self.M, requires_grad=True, dtype=torch.double))
         # Init tau between -1 and 1
-        self.tau = torch.nn.Parameter(torch.zeros(self.N, self.rank, requires_grad=True, dtype=torch.cdouble))
+        self.tau = torch.nn.Parameter(torch.zeros(self.N, self.rank, requires_grad=True))
         # Tau is then cast to [-shift_constraint, shift_constraint]
         # self.tau = lambda: torch.tanh(self.tau_tilde) * self.shift_constraint
         self.optimizer = Adam(self.parameters(), lr=lr)

@@ -4,8 +4,7 @@ from helpers.callbacks import ChangeStopper
 from helpers.losses import frobeniusLoss
 from helpers.losses import ShiftNMFLoss
 
-import scipy.io
-import time
+
 
 class torchShiftAA(torch.nn.Module):
     def __init__(self, X, rank, alpha=1e-9, lr = 10, factor = 0.9, patience = 5):
@@ -29,8 +28,6 @@ class torchShiftAA(torch.nn.Module):
         # DxN (C) * NxM (X) =  DxM (A)
         # NxD (S) *  DxM (A) = NxM (SA)    
         
-        self.C_tilde = torch.nn.Parameter(torch.randn(rank, N, requires_grad=True,dtype=torch.double)*3)
-        self.S_tilde = torch.nn.Parameter(torch.randn(N, rank, requires_grad=True, dtype=torch.double)*3)
         self.C_tilde = torch.nn.Parameter(torch.randn(rank, N, requires_grad=True,dtype=torch.double)*3)
         self.S_tilde = torch.nn.Parameter(torch.randn(N, rank, requires_grad=True, dtype=torch.double)*3)
         
@@ -80,17 +77,16 @@ class torchShiftAA(torch.nn.Module):
 
         # archetypes back shifted
         #A_shift = torch.einsum('dM,NdM->NdM', self.A_F.double(), omega.double())
-        S_shift = torch.einsum('Nd,NdM->NdM', self.S(), omega) 
+        self.S_shift = torch.einsum('Nd,NdM->NdM', self.S(), omega) 
 
         # Reconstruction
-        x = torch.einsum('NdM,dM->NM', S_shift, self.A_F)
+        x = torch.einsum('NdM,dM->NM', self.S_shift, self.A_F)
         return x
 
     def fit(self, verbose=False, return_loss=False):
         self.stopper.reset()
         # Convergence criteria
         running_loss = []
-        while not self.stopper.trigger():
         while not self.stopper.trigger():
             # zero optimizer gradient
             self.optimizer.zero_grad()
