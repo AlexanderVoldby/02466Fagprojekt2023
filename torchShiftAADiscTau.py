@@ -1,5 +1,5 @@
 import torch
-from torch.optim import Adam, lr_scheduler
+from torch.optim import Adam, lr_scheduler, SGD
 from helpers.callbacks import ChangeStopper
 from helpers.losses import frobeniusLoss
 from helpers.losses import ShiftNMFLoss
@@ -49,10 +49,11 @@ class torchShiftAADisc(torch.nn.Module):
         self.C = lambda:self.softmax(self.C_tilde).type(torch.cdouble)
         self.S = lambda:self.softmax(self.S_tilde).type(torch.cdouble)
         #self.tau = lambda:torch.tanh(self.tau_tilde)*self.shift_constraint
-        #self.tau = lambda: torch.round(self.tau_tilde)
+        # self.tau = lambda: torch.round(self.tau_tilde)
         self.tau = lambda: self.tau_tilde
 
         self.optimizer = Adam(self.parameters(), lr=lr)
+        # self.optimizer = SGD(self.parameters(), lr=lr)
         self.stopper = ChangeStopper(alpha=alpha, patience=patience)
         self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=factor, patience=patience-2)
 
@@ -150,11 +151,13 @@ class torchShiftAADisc(torch.nn.Module):
         
         return x
 
-    def fit(self, verbose=False, return_loss=False, disc_tau=False):
+    def fit(self, verbose=False, return_loss=False, disc_tau=False, max_iter=1e10):
         self.stopper.reset()
         # Convergence criteria
         running_loss = []
-        while not self.stopper.trigger():
+        iters = 0
+        while not self.stopper.trigger() and iters < max_iter:
+            iters += 1
             # zero optimizer gradient
             self.optimizer.zero_grad()
 
@@ -165,9 +168,43 @@ class torchShiftAADisc(torch.nn.Module):
             loss = self.lossfn.forward(output)
             loss.backward()
 
-            # Update A and B
+            # self.tau_tilde.grad = self.tau_tilde.grad
+            # print(torch.sign(self.tau_tilde.grad))
+            # self.tau_tilde.grad = torch.sign(self.tau_tilde.grad)
+            
+            # print("tau: ", self.tau_tilde.grad)
+            change = torch.sign(self.tau_tilde.grad)
+            #set gradient 0 - possibly not needed since tau tilde is overwritten
+            self.tau_tilde.grad = self.tau_tilde.grad * 0
+            #update tau
+            self.tau_tilde = torch.nn.Parameter(self.tau_tilde + change)
+            
+            # self.tau_tilde = torch.nn.Parameter(self.tau_tilde + torch.sign(self.tau_tilde.grad.clone()))
+            # self.tau_tilde.grad = self.tau_tilde.grad * 0
+            
+            #divide tau by the learning rate in the optimizer
+            # print(self.optimizer.param_groups[0].get('lr'))
+            # exit()
+            
+            
+            #round the gradient of tau to the nearest integer
+            # print("loss gradient: ", self.tau_tilde.grad)
+            # self.tau_tilde.grad = torch.round(self.tau_tilde.grad)
+            
+            # self.tau_tilde.grad = self.tau_tilde.grad / self.optimizer.param_groups[0].get('lr')
+            
+            
+            
+            #print the gradient of the loss function
+            
+            
+            # Update parameters
             self.optimizer.step()
             self.scheduler.step(loss)
+            
+            #round tau to the nearest integer
+            # self.tau_tilde = torch.nn.Parameter(torch.round(self.tau_tilde))
+            
             # append loss for graphing
             running_loss.append(loss.item())
 
@@ -177,7 +214,7 @@ class torchShiftAADisc(torch.nn.Module):
 
             # print loss
             if verbose:
-                print(f"epoch: {len(running_loss)}, Loss: {1-loss.item()}", end="\r")
+                print(f"epoch: {len(running_loss)}, Loss: {1-loss.item()}\n Tau: {np.linalg.norm(self.tau().detach().numpy())}")
         
         C = self.softmax(self.C_tilde)
         S = self.softmax(self.S_tilde)
@@ -206,9 +243,9 @@ if __name__ == "__main__":
     N, M = X.shape
     rank = 3
     D = rank
-    AA = torchShiftAADisc(X, rank)
+    AA = torchShiftAADisc(X, rank, lr=0.3)
     print("test")
-    C,S, tau = AA.fit(verbose=True, disc_tau=True)
+    C,S, tau = AA.fit(verbose=True, disc_tau=False, max_iter=100)
 
     recon = AA.recon.detach().resolve_conj().numpy()
     A = torch.fft.ifft(AA.A_F).detach().numpy()
