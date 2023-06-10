@@ -9,6 +9,31 @@ def plot_data(X, title=""):
     plt.title(title)
     plt.show()
 
+def NMI(S, Sp):
+    """
+    Function t compute the normalized mutul information between two probability distributions. The probability
+    distributions must be represented as matrices N x M such that each row is a realization of M random variables
+    forming a joint probability distribution. We consider the case where we want to comapre an estimate to the
+    ground truth
+    :param mixing: The estimate of the probability distribution computed by some factorization model
+    :param org_mixing: The ground truth of the dsitribution
+    :return: A number in [0, 1] which is 1 if mixing and org_mixing are identical and 0 if they share no information.
+    """
+    N, M = S.shape
+
+    def I(A, B):
+        pdd = 1 / N * np.matmul(A.T, B)
+        pd = 1 / N * np.sum(A, axis=0)
+        pdp = 1 / N * np.sum(B, axis=0)
+        info = 0
+        for i in range(M):
+            for j in range(M):
+                info += pdd[i, j]*np.log(pdd[i, j]/(pd[i]*pdp[j]))
+
+        return info
+
+    NMI = 2*I(S, Sp) / (I(S, S) + I(Sp, Sp))
+    return NMI
 
 def explained_variance(original_data, reconstructed_data):
     """
@@ -42,6 +67,7 @@ def train_n_times(number, object, data, components, **kwargs):
     params = []
     losses = []
     for i in range(number):
+        print(f"Training model {i+1}/{number}")
         model = object(data, components, **kwargs)
         returns = model.fit(verbose=True, return_loss=True)
         losses.append(returns[-1]) # Loss is always the last element returned
