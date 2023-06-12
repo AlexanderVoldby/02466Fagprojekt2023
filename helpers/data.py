@@ -26,7 +26,6 @@ def inv_normalize_data(target, std):
     #same as above
     return target * std
 
-X = normalize_data(X)
 
 #Clean data
 
@@ -52,5 +51,3 @@ def inv_normalize_data(target, std):
     # return target * std + mean
     #same as above
     return target * std
-
-X_clean = normalize_data(X_clean)
