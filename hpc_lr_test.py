@@ -2,6 +2,7 @@ import torch
 from Artificial_no_shift import X
 X_art = X
 import scipy
+import scipy.io
 
 # load data from .MAT file
 mat = scipy.io.loadmat('helpers/data/NMR_mix_DoE.mat')
@@ -28,26 +29,31 @@ model_name = "NMF"
 data_name = "urine"
 X = X_urine
 
-lrs = [10**x for x in range(-5,1)]
+lrs = [10**i for i in range(-5,1)]
+components = [i for i in range(1,15)]
 nr_tests = 10
-losses = np.zeros((len(lrs),nr_tests))
+losses = np.zeros((len(lrs),nr_tests,len(components)))
 
-for i, lr in enumerate(lrs):
-    print("learning rate:" + str(lr))
-    for it in range(nr_tests):
-        model = NMF(X, 3, lr=lr, factor=1, patience=10)
-        returns = model.fit(verbose=False, return_loss=True)
-        loss = returns[-1]
-        losses[i,it] = loss[-1]
+for ic, comp_nr in enumerate(components):
+    print("nr of components:"+str(comp_nr))
+    for i, lr in enumerate(lrs):
+        print("learning rate:" + str(lr))
+        for it in range(nr_tests):
+            model = NMF(X, comp_nr, lr=lr, factor=1, patience=10)
+            returns = model.fit(verbose=False, return_loss=True)
+            loss = returns[-1]
+            losses[i,it,ic] = loss[-1]
 
 print(lrs)
-print(np.mean(losses,axis=1))
 print("all losses")
 print(losses)
-plt.ylabel("average loss")
-plt.xlabel("Learning rate")
-plt.plot([str(lr) for lr in lrs], np.mean(losses,axis=1).flatten())
-plt.suptitle('Categorical Plotting')
-plt.savefig("lr_test_"+str(model_name))
+print("DONE")
+    # plt.ylabel("average loss")
+    # plt.xlabel("Learning rate")
+    # plt.plot([str(lr) for lr in lrs], np.mean(losses,axis=1).flatten())
+    # plt.suptitle('Categorical Plotting')
+    # plt.savefig("lr_test_"+str(model_name)+"_"+str(data_name)+"_"+str(comp_nr))
+
+np.save("lr_test_"+str(model_name)+"_"+str(data_name),losses)
 
 
