@@ -137,12 +137,12 @@ if __name__ == "__main__":
     mat = scipy.io.loadmat('helpers/data/NMR_mix_DoE.mat')
 
     #Get X and Labels. Probably different for the other dataset, but i didn't check :)
-    X_get = mat.get('xData')
+    X = mat.get('xData')
     # N, M = X.shape
     # X = X[:10]
     rank = 3
     D = rank
-    AA = torchShiftAA(X_get, rank, lr=0.3)
+    AA = torchShiftAA(X, rank, lr=0.3)
     print("test")
     C,S, tau = AA.fit(verbose=True)
 
