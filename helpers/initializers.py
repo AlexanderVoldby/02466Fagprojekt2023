@@ -1,6 +1,11 @@
 import numpy as np
 from numpy.matlib import repmat
 
+try:
+    from helpers.losses import frobeniusLoss
+except:
+    from losses import frobeniusLoss
+
 def FurthestSum(K, noc, i, exclude=[]):
     """
     Python implementation of Morten Mørup's Furthest Sum algorithm
@@ -64,36 +69,109 @@ def FurthestSum(K, noc, i, exclude=[]):
             index[ind_t] = False
     return i
 
-def init_s(X, C, noc):
-     
-    U = range(X.shape[0])
+import torch
+
+class S_fit(torch.nn.Module):
+    def __init__(self, X, C):
+        super(S_fit, self).__init__()
+        self.noc = C.shape[0]
+        
+        self.softmax = torch.nn.Softmax(dim=1)
+        
+        self.C_tilde = torch.nn.Parameter(torch.Tensor(C), requires_grad=False)
+        self.X = torch.tensor(X, dtype=torch.float32)
+        # self.C_tilde = torch.tensor(C, dtype=torch.float32)
+        self.S_tilde = torch.nn.Parameter(torch.zeros(X.shape[0], self.noc, requires_grad=True))
+
+        
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=0.3)
+        # self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, 'min', patience=5, factor=0.9)
+        
+        self.loss_fn = frobeniusLoss(self.X)
+        
+    def forward(self):
+        CX  = torch.matmul(self.softmax(self.C_tilde), self.X)
+        
+        SCX = torch.matmul(self.softmax(self.S_tilde), CX)
+        
+        return SCX
+
+    def fit(self, epochs=100, return_tilde=False):
+        for _ in range(epochs):
+            self.optimizer.zero_grad()
+            
+            output = self.forward()
+            
+            loss = self.loss_fn.forward(output)
+            loss.backward()
+            
+            #print gradients
+            # self.C_tilde.grad = self.C_tilde.grad * 0
+            # print(np.linalg.norm(self.S_tilde.grad))
+            
+            self.optimizer.step()
+            # self.scheduler.step(loss)
+            
+            # print(loss.item())
+        
+        if return_tilde:
+            return self.C_tilde.detach().numpy(), self.S_tilde.detach().numpy()
+        else:
+            return self.softmax(self.C_tilde).detach().numpy(), self.softmax(self.S_tilde).detach().numpy()
+
+
+def init_C_S(X, rank, epochs=50, return_tilde=False):
     
-    XC = np.matmul(X, C)
-    XCtX = np.dot(XC.T, X[:, U])
-    CtXtXC = np.dot(XC.T, XC)
-    S = -np.log(np.random.rand(noc, len(U)))
-    S = S / (np.ones((noc, 0)) * np.sum(S, 0))
-    SSt = np.dot(S, S.T)
-
-    SST = np.sum(np.sum(X[:, U] * X[:, U]))
-
-    SSE = SST - 2 * np.sum(XCtX * S) + np.sum(CtXtXC * SSt)
-    # S, SSE, muS, SSt = Supdate(S, XCtX, CtXtXC, muS, SST, SSE, 25)
-
+    cols = FurthestSum(X.T, rank, 0)
+    
+    n_row, n_col = X.shape
+    
+    C = np.zeros((rank, n_row))
+    
+    for i,ele in enumerate(cols):
+        C[i][ele] = 1
+        
+    model = S_fit(X, C)
+    return model.fit(epochs=epochs)
 
 
 if __name__ == "__main__":
     print("This is a helper file, import it to use it.")
     import pandas as pd
     import scipy.io
+    import matplotlib.pyplot as plt
     mat = scipy.io.loadmat('data/NMR_mix_DoE.mat')
     X = mat.get('xData')
     
-    print(FurthestSum(X.T, 3, 0))
+    rank = 3
     
-    n_col = X.shape[1]
-    cols = FurthestSum(X, 3, 0)
-    C = np.zeros((n_col, 3))
-    for i in cols:
-        C[i] = 10
-    print(init_s(X, C, 3))
+    print(FurthestSum(X.T, rank, 0))
+    
+    # n_row, n_col = X.shape
+    
+    # cols = FurthestSum(X.T, rank, 0)
+        
+    # C = np.zeros((rank, n_row))
+    
+    # for i,ele in enumerate(cols):
+    #     C[i][ele] = 1
+    
+    # C = np.random.rand(rank, n_row)
+    # plt.plot(X.T)
+    
+    # S, C = fit_s(X, C, epochs=100)
+    # rec = np.dot(X, S)
+    # A = np.dot(C, X)
+    # rec = np.dot(S, A)
+    
+    C, S = init_C_S(X, rank, epochs=100)
+    A = np.dot(C, X)
+    rec = np.dot(S, A)
+    
+    # plt.imshow(C)
+    # plt.imshow(S, aspect='auto', interpolation="none")
+    # plt.show()
+    plt.plot(A.T)
+    plt.show()
+    plt.plot(X.T)
+    plt.show()

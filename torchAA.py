@@ -34,7 +34,10 @@ class torchAA(torch.nn.Module):
         
         self.optimizer = Adam(self.parameters(), lr=lr)
         self.stopper = ChangeStopper(alpha=alpha, patience=patience)
-        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=factor, patience=patience-2)
+        if factor < 1:
+            self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=factor, patience=patience-2)
+        else:
+            self.scheduler = None
 
  
     def forward(self):
@@ -65,7 +68,8 @@ class torchAA(torch.nn.Module):
 
             # Update A and B
             self.optimizer.step()
-            self.scheduler.step(loss)
+            if self.scheduler != None:
+                self.scheduler.step(loss)
             # append loss for graphing
             running_loss.append(loss.item())
 
@@ -74,14 +78,13 @@ class torchAA(torch.nn.Module):
 
             # print loss
             if verbose:
-                print(f"Explained variance: {len(running_loss)}, Loss: {1-loss.item()}", end='\r')
+                print(f"Epoch: {len(running_loss)}, Explained variance: {1-loss.item()}", end='\r')
 
         C = self.softmax(self.C)
         S = self.softmax(self.S)
 
         C = C.detach().numpy()
         S = S.detach().numpy()
-
         if return_loss:
             return C, S, running_loss
         else:
