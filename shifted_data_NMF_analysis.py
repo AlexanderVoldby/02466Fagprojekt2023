@@ -5,9 +5,9 @@ from helpers.callbacks import explained_variance
 
 
 dir = "Results/shifted_dataset/"
-shift_H = np.loadtxt(dir+"shiftNMF_H.txt")
-shift_W = np.loadtxt(dir+"shiftNMF_W.txt")
-shift_tau = np.loadtxt(dir+"shiftNMF_tau.txt", dtype=np.complex_)
+shift_H = np.loadtxt(dir+"shiftNMF_disc_H.txt")
+shift_W = np.loadtxt(dir+"shiftNMF_disc_W.txt")
+shift_tau = np.loadtxt(dir+"shiftNMF_disc_tau.txt", dtype=np.complex_)
 shift_tau = shift_tau.real
 NMF_H = np.loadtxt(dir+"NMF_H.txt")
 NMF_W = np.loadtxt(dir+"NMF_W.txt")

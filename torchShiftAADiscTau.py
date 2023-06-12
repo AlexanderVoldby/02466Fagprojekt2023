@@ -151,7 +151,7 @@ class torchShiftAADisc(torch.nn.Module):
         
         return x
 
-    def fit(self, verbose=False, return_loss=False, disc_tau=False, max_iter=1e10):
+    def fit(self, verbose=False, return_loss=False, disc_tau=False, max_iter=20000):
         self.stopper.reset()
         # Convergence criteria
         running_loss = []
@@ -214,7 +214,7 @@ class torchShiftAADisc(torch.nn.Module):
 
             # print loss
             if verbose:
-                print(f"epoch: {len(running_loss)}, Loss: {1-loss.item()}\n Tau: {np.linalg.norm(self.tau().detach().numpy())}")
+                print(f"epoch: {len(running_loss)}, Explained variance: {1-loss.item()}\n Tau: {np.linalg.norm(self.tau().detach().numpy())}")
         
         C = self.softmax(self.C_tilde)
         S = self.softmax(self.S_tilde)
@@ -243,7 +243,7 @@ if __name__ == "__main__":
     N, M = X.shape
     rank = 3
     D = rank
-    AA = torchShiftAADisc(X, rank, lr=0.3)
+    AA = torchShiftAADisc(X, rank, lr=0.01)
     print("test")
     C,S, tau = AA.fit(verbose=True, disc_tau=False, max_iter=100)
 

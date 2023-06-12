@@ -115,6 +115,9 @@ class ChangeStopper(Stopper):
             else:
                 self.counter = 0
 
+
+
+
     def trigger(self):
         return self.counter >= self.patience
 

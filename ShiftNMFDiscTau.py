@@ -14,7 +14,6 @@ class ShiftNMF(torch.nn.Module):
         self.rank = rank
         self.X = torch.tensor(X)
         self.N, self.M = X.shape
-
         self.softplus = torch.nn.Softplus()
         self.lossfn = ShiftNMFLoss(torch.fft.fft(self.X))
         
@@ -47,7 +46,7 @@ class ShiftNMF(torch.nn.Module):
         V = torch.einsum('NdM,dM->NM', Wf, Hft)
         return V
 
-    def fit(self, verbose=False, return_loss=False, max_iter = 1e10):
+    def fit(self, verbose=False, return_loss=False, max_iter = 20000):
         running_loss = []
         iters = 0
         while not self.stopper.trigger() and iters < max_iter:
