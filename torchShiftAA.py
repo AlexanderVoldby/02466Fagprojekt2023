@@ -52,8 +52,10 @@ class torchShiftAA(torch.nn.Module):
 
         self.optimizer = Adam(self.parameters(), lr=lr)
         self.stopper = ChangeStopper(alpha=alpha, patience=patience)
-        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=factor, patience=patience-2)
-
+        if factor < 1:
+            self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=factor, patience=patience-2)
+        else:
+            self.scheduler = None
 
     def forward(self):
         # Implementation of shift AA.
@@ -100,7 +102,8 @@ class torchShiftAA(torch.nn.Module):
 
             # Update A and B
             self.optimizer.step()
-            self.scheduler.step(loss)
+            if self.scheduler != None:
+                self.scheduler.step(loss)
             # append loss for graphing
             running_loss.append(loss.item())
 
