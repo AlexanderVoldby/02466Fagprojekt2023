@@ -3,13 +3,14 @@ from torch.optim import Adam, lr_scheduler, SGD
 from helpers.callbacks import ChangeStopper
 from helpers.losses import frobeniusLoss
 from helpers.losses import ShiftNMFLoss
+import helpers.initializers as init
 import numpy as np
 
 import scipy.io
 import time
 
 class torchShiftAADisc(torch.nn.Module):
-    def __init__(self, X, rank, alpha=1e-9, lr = 10, factor = 0.9, patience = 5):
+    def __init__(self, X, rank, alpha=1e-9, lr = 10, factor = 0.9, patience = 5, fs_init = False):
         super(torchShiftAADisc, self).__init__()
 
         # Shape of Matrix for reproduction
@@ -28,10 +29,17 @@ class torchShiftAADisc(torch.nn.Module):
 
         # Initialization of Tensors/Matrices S and C with size Col x Rank and Rank x Col
         # DxN (C) * NxM (X) =  DxM (A)
-        # NxD (S) *  DxM (A) = NxM (SA)    
-        
-        self.C_tilde = torch.nn.Parameter(torch.randn(rank, N, requires_grad=True,dtype=torch.double)*3)
-        self.S_tilde = torch.nn.Parameter(torch.randn(N, rank, requires_grad=True, dtype=torch.double)*3)
+        # NxD (S) *  DxM (A) = NxM (SA)
+        if fs_init:
+            # S, C = init.fit_s(self.X, C, epochs=50)
+            C, S  = init.init_C_S(X, rank, epochs=50, return_tilde=True)
+            
+            self.C_tilde = torch.nn.Parameter(torch.tensor(C, requires_grad=True, dtype=torch.double))
+            self.S_tilde = torch.nn.Parameter(torch.tensor(S, requires_grad=True, dtype=torch.double))
+            
+        else:
+            self.C_tilde = torch.nn.Parameter(torch.randn(rank, N, requires_grad=True,dtype=torch.double))
+            self.S_tilde = torch.nn.Parameter(torch.randn(N, rank, requires_grad=True, dtype=torch.double))
         
         
         # mat = scipy.io.loadmat('helpers/PCHA/C.mat')
@@ -57,69 +65,8 @@ class torchShiftAADisc(torch.nn.Module):
         self.stopper = ChangeStopper(alpha=alpha, patience=patience)
         self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=factor, patience=patience-2)
 
-    def rec_error(self, target, alt_tau):
-        # print(alt_tau.dtype)
-         # Implementation of shift AA.
-        f = np.arange(0, self.M) / self.M
-        # first matrix Multiplication
-        omega = np.exp(-1j * 2 * np.pi*np.einsum('Nd,M->NdM', alt_tau, f))
-        # omega_neg = torch.exp(-1j*2 * torch.pi*torch.einsum('Nd,M->NdM', self.tau()*(-1), f))
-        omega_neg = np.conj(omega)
-
-        #data to frequency domain
-        X_F = np.fft.fft(self.X)
-
-        #Aligned data (per component)
-        X_F_align = np.einsum('NM,NdM->NdM',X_F, omega_neg)
-        #X_align = torch.fft.ifft(X_F_align)
-        #The A matrix, (d,M) A, in frequency domain
-        #self.A = torch.einsum('dN,NdM->dM', self.C(), X_align)
-        #A_F = torch.fft.fft(self.A)
-        self.A_F = np.einsum('dN,NdM->dM',self.C().detach().numpy(), X_F_align)
-        #S_F = torch.einsum('Nd,NdM->NdM', self.S().double(), omega)
-
-        # archetypes back shifted
-        #A_shift = torch.einsum('dM,NdM->NdM', self.A_F.double(), omega.double())
-        self.S_shift = np.einsum('Nd,NdM->NdM', self.S().detach().numpy(), omega) 
-
-        # Reconstruction
-        x = np.einsum('NdM,dM->NM', self.S_shift, self.A_F)
-
-        # Reconstruction error
-        return np.linalg.norm(target - x, ord='fro')
     
-    def update_tau(self):
-        #update tau discretely, by adding 1 to the current tau value, and evaluating the reconstruction error
-        #for each value of tau, and choosing the one with the lowest reconstruction error
-        init_tau = self.tau().detach().numpy()
-        new_tau = np.zeros(init_tau.shape)
-        local_tau = init_tau
-        step = 1
-        target = self.X.detach().numpy()
-        # print("init_tau: ", init_tau.shape)
-        for row in range(len(init_tau)):
-            # print("row: ", row, end="\r")
-            for col in range(len(init_tau[row])):
-                # best_loss = 1000
-                
-                local_tau[row][col] = init_tau[row][col] + step
-                loss_tau_plus = self.rec_error(target, local_tau)
-                
-                local_tau[row][col] = init_tau[row][col] - step
-                loss_tau_minus = self.rec_error(target, local_tau)
-
-                if loss_tau_plus < loss_tau_minus:
-                    new_tau[row][col] = init_tau[row][col] + step
-                else:
-                    new_tau[row][col] = init_tau[row][col] - step
-                    
-        # print("old error: ", self.rec_error(self.tau().detach().numpy()))
-        print("new_error: ", self.rec_error(target, new_tau))
-        self.tau_tilde = torch.nn.Parameter(torch.tensor(new_tau))
-        # exit()
-                
-    
-    def forward(self, disc_tau=False):
+    def forward(self):
         # Implementation of shift AA.
         f = torch.arange(0, self.M) / self.M
         # first matrix Multiplication
@@ -146,12 +93,9 @@ class torchShiftAADisc(torch.nn.Module):
         # Reconstruction
         x = torch.einsum('NdM,dM->NM', self.S_shift, self.A_F)
         
-        if disc_tau:
-            self.update_tau()
-        
         return x
 
-    def fit(self, verbose=False, return_loss=False, disc_tau=False, max_iter=1e10):
+    def fit(self, verbose=False, return_loss=False, max_iter=1e10):
         self.stopper.reset()
         # Convergence criteria
         running_loss = []
@@ -162,7 +106,7 @@ class torchShiftAADisc(torch.nn.Module):
             self.optimizer.zero_grad()
 
             # forward
-            output = self.forward(disc_tau=disc_tau)
+            output = self.forward()
 
             # backward
             loss = self.lossfn.forward(output)
@@ -214,7 +158,7 @@ class torchShiftAADisc(torch.nn.Module):
 
             # print loss
             if verbose:
-                print(f"epoch: {len(running_loss)}, Loss: {1-loss.item()}\n Tau: {np.linalg.norm(self.tau().detach().numpy())}")
+                print(f"epoch: {len(running_loss)}, Loss: {1-loss.item()}, Tau: {np.linalg.norm(self.tau().detach().numpy())}", end="\r")
         
         C = self.softmax(self.C_tilde)
         S = self.softmax(self.S_tilde)
@@ -245,7 +189,7 @@ if __name__ == "__main__":
     D = rank
     AA = torchShiftAADisc(X, rank, lr=0.3)
     print("test")
-    C,S, tau = AA.fit(verbose=True, disc_tau=False, max_iter=100)
+    C,S, tau = AA.fit(verbose=True, max_iter=100)
 
     recon = AA.recon.detach().resolve_conj().numpy()
     A = torch.fft.ifft(AA.A_F).detach().numpy()
