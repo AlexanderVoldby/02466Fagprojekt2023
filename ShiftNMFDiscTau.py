@@ -1,5 +1,4 @@
 import torch
-import scipy
 from torch.optim import Adam, lr_scheduler
 from helpers.data import X, X_clean
 from helpers.callbacks import ChangeStopper
@@ -47,7 +46,7 @@ class ShiftNMF(torch.nn.Module):
         V = torch.einsum('NdM,dM->NM', Wf, Hft)
         return V
 
-    def fit(self, verbose=False, return_loss=False, max_iter = 1e10, tau_iter=0):
+    def fit(self, verbose=False, return_loss=False, max_iter = 1e10, tau_iter=0, tau_thres=1e-3):
         running_loss = []
         self.iters = 0
         self.tau_iter = tau_iter
@@ -64,10 +63,14 @@ class ShiftNMF(torch.nn.Module):
             loss.backward()
 
             change = torch.sign(self.tau_tilde.grad)
-            #set gradient 0 - possibly not needed since tau tilde is overwritten
+            grad = self.tau_tilde.grad
+            #set gradient 0, such that the tau is not updated by the optimizer
             self.tau_tilde.grad = self.tau_tilde.grad * 0
             #update tau
             if self.iters > tau_iter:
+                
+                change = (torch.abs(grad) > tau_thres) * change
+                
                 self.tau_tilde = torch.nn.Parameter(self.tau_tilde + change)
             
             # Update W, H and tau
@@ -78,7 +81,7 @@ class ShiftNMF(torch.nn.Module):
 
             # print loss
             if verbose:
-                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}, Tau {torch.norm(self.tau())}", end='\r')
+                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}, Tau: {torch.norm(self.tau())}", end='\r')
 
         W = self.softplus(self.W).detach().numpy()
         H = self.softplus(self.H).detach().numpy()
@@ -94,6 +97,7 @@ class ShiftNMF(torch.nn.Module):
 
 
 if __name__ == "__main__":
+    import scipy.io
     mat = scipy.io.loadmat('helpers/data/NMR_mix_DoE.mat')
 
     # Get X and Labels. Probably different for the other dataset, but i didn't check :)
