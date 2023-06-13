@@ -99,7 +99,7 @@ class torchShiftAADisc(torch.nn.Module):
         #     WH = torch.matmul(self.softplus(self.W), self.softplus(self.H))
         #     return WH
 
-    def fit(self, verbose=False, return_loss=False, max_iter=1e10, tau_iter=0):
+    def fit(self, verbose=False, return_loss=False, max_iter=1e10, tau_iter=0, tau_thres = 1e-3):
         self.stopper.reset()
         # Convergence criteria
         running_loss = []
@@ -125,11 +125,26 @@ class torchShiftAADisc(torch.nn.Module):
 
             #update tau
             change = torch.sign(self.tau_tilde.grad)
+            # change = torch.zeros(self.N, self.M)
+            grad = self.tau_tilde.grad
             #set gradient 0 - possibly not needed since tau tilde is overwritten
             self.tau_tilde.grad = self.tau_tilde.grad * 0
             if self.iters > tau_iter:
+                # calculate steps from tau_thres to 1 in steps of 10
+                # steps = np.round(np.log(1/tau_thres)/np.log(10))
+                # calculate change in tau tilde
+                
+                
+                change = (np.abs(grad) > tau_thres) * change
+                # print(np.abs(grad) > 1e-100)
+                # self.tau_tilde = torch.nn.Parameter(self.tau_tilde + change)
+                #loop through all gradients, and update tau tilde 
+                # for i in range(self.N):
+                #     for j in range(self.M):
+                #         if np.abs(grad[i][j]) > 1e-6:
+                #             change[i][j] = d_change[i][j]
+
                 self.tau_tilde = torch.nn.Parameter(self.tau_tilde + change)
-            
             # self.tau_tilde = torch.nn.Parameter(self.tau_tilde + torch.sign(self.tau_tilde.grad.clone()))
             # self.tau_tilde.grad = self.tau_tilde.grad * 0
             
@@ -165,7 +180,7 @@ class torchShiftAADisc(torch.nn.Module):
 
             # print loss
             if verbose:
-                print(f"epoch: {len(running_loss)}, Loss: {1-loss.item()}, Tau: {np.linalg.norm(self.tau().detach().numpy())}", end="\r")
+                print(f"epoch: {len(running_loss)}, Loss: {1-loss.item()}, Tau: {np.linalg.norm(self.tau_tilde.detach().numpy())}", end="\r")
         
         C = self.softmax(self.C_tilde)
         S = self.softmax(self.S_tilde)
@@ -194,13 +209,14 @@ if __name__ == "__main__":
     N, M = X.shape
     rank = 3
     D = rank
-    AA = torchShiftAADisc(X, rank, lr=0.3, fs_init=True)
+    AA = torchShiftAADisc(X, rank, lr=0.3, fs_init=False)
     print("test")
-    C,S, tau = AA.fit(verbose=True, max_iter=100)
+    C,S, tau = AA.fit(verbose=False, max_iter=300, tau_thres=1e-3)
 
+    print("tau: ", tau)
+    
     recon = AA.recon.detach().resolve_conj().numpy()
     A = torch.fft.ifft(AA.A_F).detach().numpy()
-
     # # For visualizing the aligned data
     # X_torch = torch.Tensor(X)
     # f = torch.arange(0, M) / M
