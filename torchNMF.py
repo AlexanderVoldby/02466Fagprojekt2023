@@ -18,7 +18,10 @@ class NMF(torch.nn.Module):
 
         self.optimizer = Adam(self.parameters(), lr=lr)
         self.stopper = ChangeStopper(alpha=alpha, patience=patience+5)
-        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=factor, patience=patience)
+        if factor < 1:
+            self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=factor, patience=patience-2)
+        else:
+            self.scheduler = None
 
     def forward(self):
         WH = torch.matmul(self.softplus(self.W), self.softplus(self.H))
@@ -40,7 +43,8 @@ class NMF(torch.nn.Module):
 
             # Update W and H
             self.optimizer.step()
-            self.scheduler.step(loss)
+            if self.scheduler != None:
+                self.scheduler.step(loss)
 
             running_loss.append(loss.item())
             self.stopper.track_loss(loss)
