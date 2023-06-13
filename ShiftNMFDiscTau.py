@@ -47,11 +47,12 @@ class ShiftNMF(torch.nn.Module):
         V = torch.einsum('NdM,dM->NM', Wf, Hft)
         return V
 
-    def fit(self, verbose=False, return_loss=False, max_iter = 1e10):
+    def fit(self, verbose=False, return_loss=False, max_iter = 1e10, tau_iter=0):
         running_loss = []
-        iters = 0
-        while not self.stopper.trigger() and iters < max_iter:
-            iters += 1
+        self.iters = 0
+        self.tau_iter = tau_iter
+        while not self.stopper.trigger() and self.iters < max_iter:
+            self.iters += 1
             # zero optimizer gradient
             self.optimizer.zero_grad()
 
@@ -66,7 +67,8 @@ class ShiftNMF(torch.nn.Module):
             #set gradient 0 - possibly not needed since tau tilde is overwritten
             self.tau_tilde.grad = self.tau_tilde.grad * 0
             #update tau
-            self.tau_tilde = torch.nn.Parameter(self.tau_tilde + change)
+            if self.iters > tau_iter:
+                self.tau_tilde = torch.nn.Parameter(self.tau_tilde + change)
             
             # Update W, H and tau
             self.optimizer.step()
@@ -76,7 +78,7 @@ class ShiftNMF(torch.nn.Module):
 
             # print loss
             if verbose:
-                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}", end='\r')
+                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}, Tau {torch.norm(self.tau())}", end='\r')
 
         W = self.softplus(self.W).detach().numpy()
         H = self.softplus(self.H).detach().numpy()
