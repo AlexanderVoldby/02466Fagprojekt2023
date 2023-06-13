@@ -4,9 +4,7 @@ from helpers.callbacks import ChangeStopper
 from helpers.losses import frobeniusLoss
 from helpers.losses import ShiftNMFLoss
 import helpers.initializers as init
-import numpy as np
 
-import scipy.io
 
 class torchShiftAADisc(torch.nn.Module):
     def __init__(self, X, rank, alpha=1e-9, lr = 10, factor = 0.9, patience = 5, fs_init = False):
@@ -108,7 +106,7 @@ class torchShiftAADisc(torch.nn.Module):
             self.tau_tilde.grad = self.tau_tilde.grad * 0
             if self.iters > tau_iter:
                 #update change such that only the gradients with a magnitude larger than tau_thres are updated
-                change = (np.abs(grad) > tau_thres) * change
+                change = (torch.abs(grad) > tau_thres) * change
                 #update tau
                 self.tau_tilde = torch.nn.Parameter(self.tau_tilde + change)
 
@@ -126,7 +124,7 @@ class torchShiftAADisc(torch.nn.Module):
 
             # print loss
             if verbose:
-                print(f"epoch: {len(running_loss)}, Loss: {1-loss.item()}, Tau: {np.linalg.norm(self.tau_tilde.detach().numpy())}", end="\r")
+                print(f"epoch: {len(running_loss)}, Loss: {1-loss.item()}, Tau: {torch.norm(self.tau_tilde)}", end="\r")
         
         C = self.softmax(self.C_tilde)
         S = self.softmax(self.S_tilde)
@@ -144,7 +142,7 @@ class torchShiftAADisc(torch.nn.Module):
 
 
 if __name__ == "__main__":
-    # import numpy as np
+    import numpy as np
     import matplotlib.pyplot as plt
     import scipy.io
     mat = scipy.io.loadmat('helpers/data/NMR_mix_DoE.mat')
