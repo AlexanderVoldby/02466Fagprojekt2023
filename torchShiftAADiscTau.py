@@ -4,10 +4,7 @@ from helpers.callbacks import ChangeStopper
 from helpers.losses import frobeniusLoss
 from helpers.losses import ShiftNMFLoss
 import helpers.initializers as init
-import numpy as np
 
-import scipy.io
-import time
 
 class torchShiftAADisc(torch.nn.Module):
     def __init__(self, X, rank, alpha=1e-9, lr = 10, factor = 0.9, patience = 5, fs_init = False):
@@ -41,28 +38,16 @@ class torchShiftAADisc(torch.nn.Module):
             self.C_tilde = torch.nn.Parameter(torch.randn(rank, N, requires_grad=True,dtype=torch.double))
             self.S_tilde = torch.nn.Parameter(torch.randn(N, rank, requires_grad=True, dtype=torch.double))
         
-        
-        # mat = scipy.io.loadmat('helpers/PCHA/C.mat')
-        # self.C_tilde = mat.get('c')
-        # self.C_tilde = torch.tensor(self.C_tilde, requires_grad=True, dtype=torch.double)
-        # self.C_tilde = torch.nn.Parameter(self.C_tilde.T)
-        
-        # mat = scipy.io.loadmat('helpers/PCHA/S.mat')
-        # self.S_tilde = mat.get('s')
-        # self.S_tilde = torch.tensor(self.S_tilde, requires_grad=True, dtype=torch.double)
-        # self.S_tilde = torch.nn.Parameter(self.S_tilde.T)
-        
         self.tau_tilde = torch.nn.Parameter(torch.zeros(N, rank, requires_grad=False, dtype=torch.double))
 
+        #Parameter for the archetypical analysis
         self.C = lambda:self.softmax(self.C_tilde).type(torch.cdouble)
         self.S = lambda:self.softmax(self.S_tilde).type(torch.cdouble)
-        #self.tau = lambda:torch.tanh(self.tau_tilde)*self.shift_constraint
-        # self.tau = lambda: torch.round(self.tau_tilde)
+        
+        #Parameter for the shift
         self.tau = lambda: self.tau_tilde
-        # self.tau = lambda: torch.round(torch.tanh(self.tau_tilde)*100)
-
+        
         self.optimizer = Adam(self.parameters(), lr=lr)
-        # self.optimizer = SGD(self.parameters(), lr=lr)
         self.stopper = ChangeStopper(alpha=alpha, patience=patience)
         if factor < 1:
             self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=factor, patience=patience-2)
@@ -97,11 +82,8 @@ class torchShiftAADisc(torch.nn.Module):
         x = torch.einsum('NdM,dM->NM', self.S_shift, self.A_F)
         
         return x
-        # else:
-        #     WH = torch.matmul(self.softplus(self.W), self.softplus(self.H))
-        #     return WH
 
-    def fit(self, verbose=False, return_loss=False, max_iter=15000, tau_iter=0):
+    def fit(self, verbose=False, return_loss=False, max_iter=15000, tau_iter=0, tau_thres = 1e-3):
         self.stopper.reset()
         # Convergence criteria
         running_loss = []
@@ -119,45 +101,22 @@ class torchShiftAADisc(torch.nn.Module):
             loss = self.lossfn.forward(output)
             loss.backward()
 
-            # self.tau_tilde.grad = self.tau_tilde.grad
-            # print(torch.sign(self.tau_tilde.grad))
-            # self.tau_tilde.grad = torch.sign(self.tau_tilde.grad)
-            
-            # print("tau: ", self.tau_tilde.grad)
-
             #update tau
             change = torch.sign(self.tau_tilde.grad)
-            #set gradient 0 - possibly not needed since tau tilde is overwritten
+            grad = self.tau_tilde.grad
+            #set gradient 0, such that the tau is not updated by the optimizer
             self.tau_tilde.grad = self.tau_tilde.grad * 0
             if self.iters > tau_iter:
+                #update change such that only the gradients with a magnitude larger than tau_thres are updated
+                change = (torch.abs(grad) > tau_thres) * change
+                #update tau
                 self.tau_tilde = torch.nn.Parameter(self.tau_tilde + change)
-            
-            # self.tau_tilde = torch.nn.Parameter(self.tau_tilde + torch.sign(self.tau_tilde.grad.clone()))
-            # self.tau_tilde.grad = self.tau_tilde.grad * 0
-            
-            #divide tau by the learning rate in the optimizer
-            # print(self.optimizer.param_groups[0].get('lr'))
-            # exit()
-            
-            
-            #round the gradient of tau to the nearest integer
-            # print("loss gradient: ", self.tau_tilde.grad)
-            # self.tau_tilde.grad = torch.round(self.tau_tilde.grad)
-            
-            # self.tau_tilde.grad = self.tau_tilde.grad / self.optimizer.param_groups[0].get('lr')
-            
-            
-            
-            #print the gradient of the loss function
-            
+
             
             # Update parameters
             self.optimizer.step()
             if self.scheduler != None:
                 self.scheduler.step(loss)
-            
-            #round tau to the nearest integer
-            # self.tau_tilde = torch.nn.Parameter(torch.round(self.tau_tilde))
             
             # append loss for graphing
             running_loss.append(loss.item())
@@ -168,7 +127,7 @@ class torchShiftAADisc(torch.nn.Module):
 
             # print loss
             if verbose:
-                print(f"epoch: {len(running_loss)}, Loss: {1-loss.item()}, Tau: {np.linalg.norm(self.tau().detach().numpy())}", end="\r")
+                print(f"epoch: {len(running_loss)}, Loss: {1-loss.item()}, Tau: {torch.norm(self.tau_tilde)}", end="\r")
         
         C = self.softmax(self.C_tilde)
         S = self.softmax(self.S_tilde)
@@ -176,7 +135,7 @@ class torchShiftAADisc(torch.nn.Module):
 
         C = C.detach().numpy()
         S = S.detach().numpy()
-        #self.tau = lambda: torch.round(self.tau_tilde)
+        
         output = self.forward()
         self.recon = torch.fft.ifft(output)
         if return_loss:
@@ -186,7 +145,7 @@ class torchShiftAADisc(torch.nn.Module):
 
 
 if __name__ == "__main__":
-    # import numpy as np
+    import numpy as np
     import matplotlib.pyplot as plt
     import scipy.io
     mat = scipy.io.loadmat('helpers/data/NMR_mix_DoE.mat')
@@ -197,13 +156,14 @@ if __name__ == "__main__":
     N, M = X.shape
     rank = 3
     D = rank
-    AA = torchShiftAADisc(X, rank, lr=0.3, fs_init=True)
+    AA = torchShiftAADisc(X, rank, lr=0.3, fs_init=False)
     print("test")
-    C,S, tau = AA.fit(verbose=True, max_iter=100)
+    C,S, tau = AA.fit(verbose=True, max_iter=100, tau_thres=1e-3)
 
+    print("tau: ", tau)
+    
     recon = AA.recon.detach().resolve_conj().numpy()
     A = torch.fft.ifft(AA.A_F).detach().numpy()
-
     # # For visualizing the aligned data
     # X_torch = torch.Tensor(X)
     # f = torch.arange(0, M) / M
