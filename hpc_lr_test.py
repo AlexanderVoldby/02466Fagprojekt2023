@@ -1,48 +1,60 @@
 import torch
-from Artificial_no_shift import X
-X_art = X
 import scipy
 import scipy.io
-
-# load data from .MAT file
-mat = scipy.io.loadmat('helpers/data/NMR_mix_DoE.mat')
-
-# Get X and Labels. Probably different for the other dataset, but i didn't check :)
-X = mat.get('xData')
-targets = mat.get('yData')
-target_labels = mat.get('yLabels')
-axis = mat.get("Axis")
-X_alko = X
+import sys
 from torchNMF import NMF
 from torchAA import torchAA
 from torchShiftAA import torchShiftAA
 from ShiftNMF_half_frequencies import ShiftNMF
 import numpy as np
 import matplotlib.pyplot as plt
-from helpers.data import X_clean
-X_oil = X_clean
-from helpers.data import X
-X_urine = X
+
+nr_components = sys.argv[1]
+model_name = sys.argv[2]
+data_name = sys.argv[3]
+
+
+if data_name == "alko":
+    # load data from .MAT file
+    mat = scipy.io.loadmat('helpers/data/NMR_mix_DoE.mat')
+    # Get X and Labels. Probably different for the other dataset, but i didn't check :)
+    X = mat.get('xData')
+    targets = mat.get('yData')
+    target_labels = mat.get('yLabels')
+    axis = mat.get("Axis")
+    X_alko = X
+if data_name == "art":
+    from Artificial_no_shift import X
+    X_art = X
+if data_name == "oil":
+    from helpers.data import X_clean
+    X_oil = X_clean
+    X = X_oil
+if data_name == "urine":
+    from helpers.data import X
+    X_urine = X
+
 
 print("starting")
-model_name = "NMF"
-data_name = "urine"
-X = X_urine
 
-lrs = [10**i for i in range(-5,1)]
-components = [i for i in range(1,15)]
+lrs = [1, 0.1, 0.01]
 nr_tests = 10
-losses = np.zeros((len(lrs),nr_tests,len(components)))
+losses = np.zeros((len(lrs),nr_tests))
 
-for ic, comp_nr in enumerate(components):
-    print("nr of components:"+str(comp_nr))
-    for i, lr in enumerate(lrs):
-        print("learning rate:" + str(lr))
-        for it in range(nr_tests):
-            model = NMF(X, comp_nr, lr=lr, factor=1, patience=10)
-            returns = model.fit(verbose=False, return_loss=True)
-            loss = returns[-1]
-            losses[i,it,ic] = loss[-1]
+for i, lr in enumerate(lrs):
+    print("learning rate:" + str(lr))
+    for it in range(nr_tests):
+        if model_name == "NMF":
+            model = NMF(X, nr_components, lr=lr, factor=1, patience=10)
+        if model_name == "AA":
+            model = torchAA(X, nr_components, lr=lr, factor=1, patience=10)
+        if model_name == "shiftAA":
+            model = torchShiftAA(X, nr_components, lr=lr, factor=1, patience=10)
+        if model_name == "shiftNMF":
+            model = ShiftNMF(X, nr_components, lr=lr, factor=1, patience=10)
+        returns = model.fit(verbose=False, return_loss=True)
+        loss = returns[-1]
+        losses[i,it] = loss[-1]
 
 print(lrs)
 print("all losses")
@@ -54,6 +66,6 @@ print("DONE")
     # plt.suptitle('Categorical Plotting')
     # plt.savefig("lr_test_"+str(model_name)+"_"+str(data_name)+"_"+str(comp_nr))
 
-np.save("lr_test_"+str(model_name)+"_"+str(data_name),losses)
+np.save(str(data_name)+"_"+str(model_name)+"_"+str(nr_components)+"lr_test",losses)
 
 
