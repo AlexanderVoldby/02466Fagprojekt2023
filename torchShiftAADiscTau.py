@@ -82,9 +82,6 @@ class torchShiftAADisc(torch.nn.Module):
         x = torch.einsum('NdM,dM->NM', self.S_shift, self.A_F)
         
         return x
-        # else:
-        #     WH = torch.matmul(self.softplus(self.W), self.softplus(self.H))
-        #     return WH
 
     def fit(self, verbose=False, return_loss=False, max_iter=1e10, tau_iter=0, tau_thres = 1e-3):
         self.stopper.reset()
