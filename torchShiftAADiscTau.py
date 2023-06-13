@@ -59,6 +59,7 @@ class torchShiftAADisc(torch.nn.Module):
         #self.tau = lambda:torch.tanh(self.tau_tilde)*self.shift_constraint
         # self.tau = lambda: torch.round(self.tau_tilde)
         self.tau = lambda: self.tau_tilde
+        # self.tau = lambda: torch.round(torch.tanh(self.tau_tilde)*100)
 
         self.optimizer = Adam(self.parameters(), lr=lr)
         # self.optimizer = SGD(self.parameters(), lr=lr)
@@ -94,20 +95,24 @@ class torchShiftAADisc(torch.nn.Module):
         x = torch.einsum('NdM,dM->NM', self.S_shift, self.A_F)
         
         return x
+        # else:
+        #     WH = torch.matmul(self.softplus(self.W), self.softplus(self.H))
+        #     return WH
 
-    def fit(self, verbose=False, return_loss=False, max_iter=1e10):
+    def fit(self, verbose=False, return_loss=False, max_iter=1e10, tau_iter=0):
         self.stopper.reset()
         # Convergence criteria
         running_loss = []
-        iters = 0
-        while not self.stopper.trigger() and iters < max_iter:
-            iters += 1
+        self.iters = 0
+        self.tau_iter = tau_iter
+        while not self.stopper.trigger() and self.iters < max_iter:
+            self.iters += 1
             # zero optimizer gradient
             self.optimizer.zero_grad()
 
             # forward
             output = self.forward()
-
+            
             # backward
             loss = self.lossfn.forward(output)
             loss.backward()
@@ -117,11 +122,13 @@ class torchShiftAADisc(torch.nn.Module):
             # self.tau_tilde.grad = torch.sign(self.tau_tilde.grad)
             
             # print("tau: ", self.tau_tilde.grad)
+
+            #update tau
             change = torch.sign(self.tau_tilde.grad)
             #set gradient 0 - possibly not needed since tau tilde is overwritten
             self.tau_tilde.grad = self.tau_tilde.grad * 0
-            #update tau
-            self.tau_tilde = torch.nn.Parameter(self.tau_tilde + change)
+            if self.iters > tau_iter:
+                self.tau_tilde = torch.nn.Parameter(self.tau_tilde + change)
             
             # self.tau_tilde = torch.nn.Parameter(self.tau_tilde + torch.sign(self.tau_tilde.grad.clone()))
             # self.tau_tilde.grad = self.tau_tilde.grad * 0
@@ -187,7 +194,7 @@ if __name__ == "__main__":
     N, M = X.shape
     rank = 3
     D = rank
-    AA = torchShiftAADisc(X, rank, lr=0.3)
+    AA = torchShiftAADisc(X, rank, lr=0.3, fs_init=True)
     print("test")
     C,S, tau = AA.fit(verbose=True, max_iter=100)
 
