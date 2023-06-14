@@ -1,13 +1,13 @@
 import torch
 from torch.optim import Adam, lr_scheduler, SGD
-from helpers.callbacks import ChangeStopper
+from helpers.callbacks import ChangeStopper, ImprovementStopper
 from helpers.losses import frobeniusLoss
 from helpers.losses import ShiftNMFLoss
 import helpers.initializers as init
 
 
 class torchShiftAADisc(torch.nn.Module):
-    def __init__(self, X, rank, alpha=1e-9, lr = 10, factor = 0.9, patience = 5, fs_init = False):
+    def __init__(self, X, rank, alpha=1e-9, lr = 10, factor = 0.9, patience = 5, fs_init = False, min_imp = 1e-4):
         super(torchShiftAADisc, self).__init__()
 
         # Shape of Matrix for reproduction
@@ -49,6 +49,8 @@ class torchShiftAADisc(torch.nn.Module):
         
         self.optimizer = Adam(self.parameters(), lr=lr)
         self.stopper = ChangeStopper(alpha=alpha, patience=patience)
+        self.improvement_stopper = ImprovementStopper(min_improvement=min_imp)
+        
         if factor < 1:
             self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=factor, patience=patience-2)
         else:
@@ -89,7 +91,7 @@ class torchShiftAADisc(torch.nn.Module):
         running_loss = []
         self.iters = 0
         self.tau_iter = tau_iter
-        while not self.stopper.trigger() and self.iters < max_iter:
+        while not self.stopper.trigger() and self.iters < max_iter and not self.improvement_stopper.trigger():
             self.iters += 1
             # zero optimizer gradient
             self.optimizer.zero_grad()
@@ -123,7 +125,7 @@ class torchShiftAADisc(torch.nn.Module):
 
             # count with early stopping
             self.stopper.track_loss(loss)
-            self.stopper.track_loss(loss)
+            self.improvement_stopper.track_loss(loss)
 
             # print loss
             if verbose:

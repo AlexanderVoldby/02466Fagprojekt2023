@@ -1,11 +1,11 @@
 import torch
 from torch.optim import Adam, lr_scheduler
-from helpers.callbacks import ChangeStopper
+from helpers.callbacks import ChangeStopper, ImprovementStopper
 from helpers.losses import frobeniusLoss, VolLoss
 
 
 class NMF(torch.nn.Module):
-    def __init__(self, X, rank, alpha=1e-6, lr=0.1, patience=5, factor=0.9):
+    def __init__(self, X, rank, alpha=1e-6, lr=0.1, patience=5, factor=0.9, min_imp=1e-4):
         super().__init__()
 
         n_row, n_col = X.shape
@@ -25,6 +25,9 @@ class NMF(torch.nn.Module):
 
         self.optimizer = Adam(self.parameters(), lr=lr)
         self.stopper = ChangeStopper(alpha=alpha, patience=patience+5)
+        self.improvement_stopper = ImprovementStopper(min_improvement=min_imp)
+        
+        
         if factor < 1:
             self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=factor, patience=patience-2)
         else:
@@ -36,7 +39,7 @@ class NMF(torch.nn.Module):
 
     def fit(self, verbose=False, return_loss=False):
         running_loss = []
-        while not self.stopper.trigger():
+        while not self.stopper.trigger() and not self.improvement_stopper.trigger():
             # zero optimizer gradient
             self.optimizer.zero_grad()
 
@@ -55,6 +58,7 @@ class NMF(torch.nn.Module):
 
             running_loss.append(loss.item())
             self.stopper.track_loss(loss)
+            self.improvement_stopper.track_loss(loss)
 
             # print loss
             if verbose:
@@ -139,7 +143,7 @@ if __name__ == "__main__":
     import numpy as np
     mvr_nmf = NMF(X_clean, 3)
     W, H = mvr_nmf.fit(verbose=True)
-    print(f"Explained variance MVR_NMF: {explained_variance(X_clean, mvr_nmf.forward().detach().numpy())}")
+    print(f"Explained variance MVR_NMF: {explained_variance(X_clean, np.matmul(W, H))}")
     plt.figure()
     for vec in H:
         plt.plot(vec)

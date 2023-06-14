@@ -1,13 +1,13 @@
 import torch
 from torch.optim import Adam, lr_scheduler
 from helpers.data import X, X_clean
-from helpers.callbacks import ChangeStopper
+from helpers.callbacks import ChangeStopper, ImprovementStopper
 from helpers.losses import frobeniusLoss, ShiftNMFLoss
 import matplotlib.pyplot as plt
 
 
 class ShiftNMF(torch.nn.Module):
-    def __init__(self, X, rank, lr=0.2, alpha=1e-8, patience=10, factor=0.9):
+    def __init__(self, X, rank, lr=0.2, alpha=1e-8, patience=10, factor=0.9, min_imp=1e-4):
         super().__init__()
 
         self.rank = rank
@@ -29,7 +29,10 @@ class ShiftNMF(torch.nn.Module):
         
         # Prøv også med SGD
         self.stopper = ChangeStopper(alpha=alpha, patience=patience + 5)
+        
         self.optimizer = Adam(self.parameters(), lr=lr)
+        self.improvement_stopper = ImprovementStopper(min_improvement=min_imp)
+        
         if factor < 1:
             self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=factor, patience=patience-2)
         else:
@@ -56,7 +59,7 @@ class ShiftNMF(torch.nn.Module):
         running_loss = []
         self.iters = 0
         self.tau_iter = tau_iter
-        while not self.stopper.trigger() and self.iters < max_iter:
+        while not self.stopper.trigger() and self.iters < max_iter and not self.improvement_stopper.trigger():
             self.iters += 1
             # zero optimizer gradient
             self.optimizer.zero_grad()
@@ -86,7 +89,8 @@ class ShiftNMF(torch.nn.Module):
             
             running_loss.append(loss.item())
             self.stopper.track_loss(loss)
-
+            self.improvement_stopper.track_loss(loss)
+            
             # print loss
             if verbose:
                 print(f"epoch: {len(running_loss)}, Loss: {loss.item()}, Tau: {torch.norm(self.tau())}", end='\r')
@@ -110,13 +114,13 @@ if __name__ == "__main__":
     mat = scipy.io.loadmat('helpers/data/NMR_mix_DoE.mat')
     # Get X and Labels. Probably different for the other dataset, but i didn't check :)
     X = mat.get('xData')
-    # X = X[:10]
-    X = X / np.std(X)
+    X = X[:10]
+    # X = X / np.std(X)
     targets = mat.get('yData')
     target_labels = mat.get('yLabels')
     axis = mat.get("Axis")
     nmf = ShiftNMF(X, 3, lr=0.1)
-    W, H, tau = nmf.fit(verbose=True, tau_iter=0, tau_thres=1e-2, max_iter=500)
+    W, H, tau = nmf.fit(verbose=True)
 
     plt.figure()
     for signal in H:
