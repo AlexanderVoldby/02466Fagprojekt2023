@@ -139,7 +139,6 @@ class ImprovementStopper(Stopper):
     
     def trigger(self):
         if self.counter >= self.patience:
-            print("Early stopping triggered")
         return self.counter >= self.patience
     
     def reset(self):
