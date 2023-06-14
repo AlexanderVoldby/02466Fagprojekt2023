@@ -12,14 +12,17 @@ class ShiftNMF(torch.nn.Module):
 
         self.rank = rank
         self.X = torch.tensor(X)
+        self.std = torch.std(self.X)
+        self.X = self.X / self.std
+        
         self.N, self.M = X.shape
 
         self.softplus = torch.nn.Softplus()
-        self.lossfn = ShiftNMFLoss(torch.fft.fft(self.X))
+        self.lossfn = frobeniusLoss(torch.fft.fft(self.X))
         
         # Initialization of Tensors/Matrices a and b with size NxR and RxM
-        self.W = torch.nn.Parameter(torch.randn(self.N, rank, requires_grad=True)*5)
-        self.H = torch.nn.Parameter(torch.randn(rank, self.M, requires_grad=True)*5)
+        self.W = torch.nn.Parameter(torch.randn(self.N, rank, requires_grad=True)*0)
+        self.H = torch.nn.Parameter(torch.randn(rank, self.M, requires_grad=True)*0)
         # self.tau = torch.nn.Parameter(torch.randn(self.N, self.rank)*10, requires_grad=True)
         self.tau_tilde = torch.nn.Parameter(torch.zeros(self.N, self.rank, requires_grad=False))
         self.tau = lambda: self.tau_tilde
@@ -89,7 +92,7 @@ class ShiftNMF(torch.nn.Module):
                 print(f"epoch: {len(running_loss)}, Loss: {loss.item()}, Tau: {torch.norm(self.tau())}", end='\r')
 
         W = self.softplus(self.W).detach().numpy()
-        H = self.softplus(self.H).detach().numpy()
+        H = (self.softplus(self.H)*self.std).detach().numpy()
         tau = self.tau().detach().numpy()
 
         output = self.forward()
@@ -103,15 +106,17 @@ class ShiftNMF(torch.nn.Module):
 
 if __name__ == "__main__":
     import scipy.io
+    import numpy as np
     mat = scipy.io.loadmat('helpers/data/NMR_mix_DoE.mat')
-
     # Get X and Labels. Probably different for the other dataset, but i didn't check :)
     X = mat.get('xData')
+    # X = X[:10]
+    X = X / np.std(X)
     targets = mat.get('yData')
     target_labels = mat.get('yLabels')
     axis = mat.get("Axis")
-    nmf = ShiftNMF(X, 3)
-    W, H, tau = nmf.fit(verbose=True)
+    nmf = ShiftNMF(X, 3, lr=0.1)
+    W, H, tau = nmf.fit(verbose=True, tau_iter=0, tau_thres=1e-2, max_iter=500)
 
     plt.figure()
     for signal in H:
