@@ -100,7 +100,7 @@ class ShiftNMF(torch.nn.Module):
         tau = self.tau().detach().numpy()
 
         output = self.forward()
-        self.recon = torch.fft.ifft(output)
+        self.recon = torch.fft.ifft(output)*self.std
 
         if return_loss:
             return W, H, tau, running_loss
