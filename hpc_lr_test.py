@@ -4,12 +4,12 @@ import scipy.io
 import sys
 from torchNMF import NMF
 from torchAA import torchAA
-from torchShiftAA import torchShiftAA
-from ShiftNMF_half_frequencies import ShiftNMF
+from torchShiftAADiscTau import torchShiftAADisc
+from ShiftNMFDiscTau import ShiftNMF
 import numpy as np
 import matplotlib.pyplot as plt
 
-nr_components = sys.argv[1]
+nr_components = int(sys.argv[1])
 model_name = sys.argv[2]
 data_name = sys.argv[3]
 
@@ -36,27 +36,32 @@ if data_name == "urine":
 
 
 print("starting")
+print(model_name)
+print(data_name)
 
 lrs = [1, 0.1, 0.01]
 nr_tests = 10
 losses = np.zeros((len(lrs),nr_tests))
 
+alpha = 1e-6
+
 for i, lr in enumerate(lrs):
     print("learning rate:" + str(lr))
     for it in range(nr_tests):
         if model_name == "NMF":
-            model = NMF(X, nr_components, lr=lr, factor=1, patience=10)
+            model = NMF(X, nr_components, lr=lr, alpha = alpha, factor=1, patience=10)
         if model_name == "AA":
-            model = torchAA(X, nr_components, lr=lr, factor=1, patience=10)
+            model = torchAA(X, nr_components, lr=lr, alpha = alpha, factor=1, patience=10)
         if model_name == "shiftAA":
-            model = torchShiftAA(X, nr_components, lr=lr, factor=1, patience=10)
+            model = torchShiftAADisc(X, nr_components, lr=lr, alpha = alpha, factor=1, patience=10)
         if model_name == "shiftNMF":
-            model = ShiftNMF(X, nr_components, lr=lr, factor=1, patience=10)
+            model = ShiftNMF(X, nr_components, lr=lr, alpha = alpha, factor=1, patience=10)
         returns = model.fit(verbose=False, return_loss=True)
         loss = returns[-1]
         losses[i,it] = loss[-1]
 
 print(lrs)
+print(np.mean(losses,axis=1).flatten())
 print("all losses")
 print(losses)
 print("DONE")
@@ -66,6 +71,6 @@ print("DONE")
     # plt.suptitle('Categorical Plotting')
     # plt.savefig("lr_test_"+str(model_name)+"_"+str(data_name)+"_"+str(comp_nr))
 
-np.save(str(data_name)+"_"+str(model_name)+"_"+str(nr_components)+"lr_test",losses)
+np.save(str(data_name)+"_"+str(model_name)+"_"+str(nr_components)+"_"+"lr_test",losses)
 
 

@@ -49,9 +49,11 @@ class torchShiftAADisc(torch.nn.Module):
         
         self.optimizer = Adam(self.parameters(), lr=lr)
         self.stopper = ChangeStopper(alpha=alpha, patience=patience)
-        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=factor, patience=patience-2)
+        if factor < 1:
+            self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=factor, patience=patience-2)
+        else:
+            self.scheduler = None
 
-    
     def forward(self):
         # Implementation of shift AA.
         f = torch.arange(0, self.M) / self.M
@@ -81,7 +83,7 @@ class torchShiftAADisc(torch.nn.Module):
         
         return x
 
-    def fit(self, verbose=False, return_loss=False, max_iter=1e10, tau_iter=0, tau_thres = 1e-3):
+    def fit(self, verbose=False, return_loss=False, max_iter=15000, tau_iter=0, tau_thres = 1e-3):
         self.stopper.reset()
         # Convergence criteria
         running_loss = []
@@ -113,7 +115,8 @@ class torchShiftAADisc(torch.nn.Module):
             
             # Update parameters
             self.optimizer.step()
-            self.scheduler.step(loss)
+            if self.scheduler != None:
+                self.scheduler.step(loss)
             
             # append loss for graphing
             running_loss.append(loss.item())

@@ -3,6 +3,7 @@
 /__pychache__
 /helpers/__pychache__
 /train_weights
+*lr_test
 *.m
 *.parquet
 *.pyc
