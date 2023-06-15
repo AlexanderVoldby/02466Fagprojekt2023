@@ -129,7 +129,7 @@ class torchShiftAADisc(torch.nn.Module):
 
             # print loss
             if verbose:
-                print(f"epoch: {len(running_loss)}, Loss: {1-loss.item()}, Tau: {torch.norm(self.tau_tilde)}", end="\r")
+                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}, Tau: {torch.norm(self.tau_tilde)}", end="\r")
         
         C = self.softmax(self.C_tilde)
         S = self.softmax(self.S_tilde)

@@ -83,7 +83,7 @@ class torchAA(torch.nn.Module):
 
             # print loss
             if verbose:
-                print(f"Epoch: {len(running_loss)}, Explained variance: {1-loss.item()}", end='\r')
+                print(f"Epoch: {len(running_loss)}, Loss: {loss.item()}", end='\r')
 
         C = self.softmax(self.C)
         S = self.softmax(self.S)
