@@ -24,7 +24,7 @@ if data_name == "alko":
     axis = mat.get("Axis")
     X_alko = X
 if data_name == "art":
-    from Artificial_no_shift import X
+    from Artificial_shift import X
     X_art = X
 if data_name == "oil":
     from helpers.data import X_clean
@@ -40,6 +40,7 @@ print(model_name)
 print(data_name)
 
 lrs = [1, 0.1, 0.01]
+
 nr_tests = 10
 losses = np.zeros((len(lrs),nr_tests))
 
@@ -71,6 +72,6 @@ print("DONE")
     # plt.suptitle('Categorical Plotting')
     # plt.savefig("lr_test_"+str(model_name)+"_"+str(data_name)+"_"+str(comp_nr))
 
-np.save(str(data_name)+"_"+str(model_name)+"_"+str(nr_components)+"_"+"lr_test",losses)
+np.save("./losses/"+str(data_name)+"_"+str(model_name)+"_"+str(nr_components)+"_"+"lr_test",losses)
 
 
