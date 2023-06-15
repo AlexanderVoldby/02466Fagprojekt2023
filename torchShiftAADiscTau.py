@@ -85,7 +85,7 @@ class torchShiftAADisc(torch.nn.Module):
         
         return x
 
-    def fit(self, verbose=False, return_loss=False, max_iter=15000, tau_iter=0, tau_thres = 1e-3):
+    def fit(self, verbose=False, return_loss=False, max_iter=15000, tau_iter=0, tau_thres = 1e-5):
         self.stopper.reset()
         # Convergence criteria
         running_loss = []

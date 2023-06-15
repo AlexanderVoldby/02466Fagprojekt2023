@@ -55,7 +55,7 @@ class ShiftNMF(torch.nn.Module):
         V = torch.einsum('NdM,dM->NM', Wf, Hft)
         return V
 
-    def fit(self, verbose=False, return_loss=False, max_iter = 15000, tau_iter=0, tau_thres=1e-3):
+    def fit(self, verbose=False, return_loss=False, max_iter = 15000, tau_iter=0, tau_thres=1e-5):
         running_loss = []
         self.iters = 0
         self.tau_iter = tau_iter
