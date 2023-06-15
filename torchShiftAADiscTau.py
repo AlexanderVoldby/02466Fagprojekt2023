@@ -7,7 +7,7 @@ import helpers.initializers as init
 
 
 class torchShiftAADisc(torch.nn.Module):
-    def __init__(self, X, rank, alpha=1e-9, lr = 10, factor = 0.9, patience = 5, fs_init = False, min_imp = 1e-4):
+    def __init__(self, X, rank, alpha=1e-9, lr = 10, factor = 0.9, patience = 5, min_imp = 1e-6):
         super(torchShiftAADisc, self).__init__()
 
         # Shape of Matrix for reproduction
@@ -27,16 +27,8 @@ class torchShiftAADisc(torch.nn.Module):
         # Initialization of Tensors/Matrices S and C with size Col x Rank and Rank x Col
         # DxN (C) * NxM (X) =  DxM (A)
         # NxD (S) *  DxM (A) = NxM (SA)
-        if fs_init:
-            # S, C = init.fit_s(self.X, C, epochs=50)
-            C, S  = init.init_C_S(X, rank, epochs=50, return_tilde=True)
-            
-            self.C_tilde = torch.nn.Parameter(torch.tensor(C, requires_grad=True, dtype=torch.double))
-            self.S_tilde = torch.nn.Parameter(torch.tensor(S, requires_grad=True, dtype=torch.double))
-            
-        else:
-            self.C_tilde = torch.nn.Parameter(torch.randn(rank, N, requires_grad=True,dtype=torch.double))
-            self.S_tilde = torch.nn.Parameter(torch.randn(N, rank, requires_grad=True, dtype=torch.double))
+        self.C_tilde = torch.nn.Parameter(torch.randn(rank, N, requires_grad=True,dtype=torch.double))
+        self.S_tilde = torch.nn.Parameter(torch.randn(N, rank, requires_grad=True, dtype=torch.double))
         
         self.tau_tilde = torch.nn.Parameter(torch.zeros(N, rank, requires_grad=False, dtype=torch.double))
 

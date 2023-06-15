@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 
 class ShiftNMF(torch.nn.Module):
-    def __init__(self, X, rank, lr=0.2, alpha=1e-8, patience=10, factor=0.9, min_imp=1e-4):
+    def __init__(self, X, rank, lr=0.2, alpha=1e-8, patience=10, factor=0.9, min_imp=1e-6):
         super().__init__()
 
         self.rank = rank
@@ -21,8 +21,8 @@ class ShiftNMF(torch.nn.Module):
         self.lossfn = frobeniusLoss(torch.fft.fft(self.X))
         
         # Initialization of Tensors/Matrices a and b with size NxR and RxM
-        self.W = torch.nn.Parameter(torch.randn(self.N, rank, requires_grad=True)*0)
-        self.H = torch.nn.Parameter(torch.randn(rank, self.M, requires_grad=True)*0)
+        self.W = torch.nn.Parameter(torch.randn(self.N, rank, requires_grad=True))
+        self.H = torch.nn.Parameter(torch.randn(rank, self.M, requires_grad=True))
         # self.tau = torch.nn.Parameter(torch.randn(self.N, self.rank)*10, requires_grad=True)
         self.tau_tilde = torch.nn.Parameter(torch.zeros(self.N, self.rank, requires_grad=False))
         self.tau = lambda: self.tau_tilde
