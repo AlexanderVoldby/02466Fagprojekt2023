@@ -59,30 +59,31 @@ if __name__ == "__main__":
     H = np.array([gauss(m, s, np.arange(0, 1000, 0.1)) for m, s in list(zip(mean, std))])
     X = shift_dataset(W, H, tau)
 
-    (best_W, best_H, best_tau), loss = train_n_times(10, ShiftNMF, X, 3, alpha=1e-9)
+    (best_W, best_H, best_tau), loss = train_n_times(8, ShiftNMF, X, 3, alpha=1e-9, lr=0.1)
     np.savetxt("Results/shifted_dataset/shiftNMF_disc_H.txt", best_H)
     np.savetxt("Results/shifted_dataset/shiftNMF_disc_W.txt", best_W)
     np.savetxt("Results/shifted_dataset/shiftNMF_disc_tau.txt", best_tau)
 
-    (best_C, best_S, best_AA_tau), loss = train_n_times(10, torchShiftAADisc, X, 3, alpha=1e-9, lr=0.01)
-    np.savetxt("Results/shifted_dataset/shiftAA_disc_H.txt", best_C)
-    np.savetxt("Results/shifted_dataset/shiftAA_disc_W.txt", best_S)
-    np.savetxt("Results/shifted_dataset/shiftAA_disc_tau.txt", best_AA_tau)
+    # (best_C, best_S, best_AA_tau), loss2 = train_n_times(10, torchShiftAADisc, X, 3, alpha=1e-9, lr=0.1)
+    # np.savetxt("Results/shifted_dataset/shiftAA_disc_C.txt", best_C)
+    # np.savetxt("Results/shifted_dataset/shiftAA_disc_S.txt", best_S)
+    # np.savetxt("Results/shifted_dataset/shiftAA_disc_tau.txt", best_AA_tau)
 
     # Then with regular NMF:
-    (nmfW, nmfH), loss2 = train_n_times(5, NMF, X, 3)
-    np.savetxt("Results/shifted_dataset/NMF_H.txt", nmfH)
-    np.savetxt("Results/shifted_dataset/NMF_W.txt", nmfW)
+    # (nmfW, nmfH), loss2 = train_n_times(5, NMF, X, 3)
+    # np.savetxt("Results/shifted_dataset/NMF_H.txt", nmfH)
+    # np.savetxt("Results/shifted_dataset/NMF_W.txt", nmfW)
 
     # Then with regular AA:
-    (C, S), loss3 = train_n_times(5, torchAA, X, 3)
-    np.savetxt("Results/shifted_dataset/AA_C.txt", C)
-    np.savetxt("Results/shifted_dataset/AA_S.txt", S)
+    # (C, S), loss3 = train_n_times(5, torchAA, X, 3)
+    # np.savetxt("Results/shifted_dataset/AA_C.txt", C)
+    # np.savetxt("Results/shifted_dataset/AA_S.txt", S)
 
     if plot:
-        plot_latent_components(H, ["1", "2", "3"], "Latent components found by shiftNMF")
-        plot_data(shift_dataset(best_W, best_H, best_tau), "Dataset reconstructed by shiftNMF")
+        pass
+        # plot_latent_components(H, ["1", "2", "3"], "Latent components found by shiftNMF")
+        # plot_data(shift_dataset(best_W, best_H, best_tau), "Dataset reconstructed by shiftNMF")
 
-        plot_latent_components(nmfH, ["1", "2", "3"], "Signals determined by NMF")
-        plot_data(np.matmul(nmfW, nmfH), "Reconstruction by NMF")
+        # plot_latent_components(nmfH, ["1", "2", "3"], "Signals determined by NMF")
+        # plot_data(np.matmul(nmfW, nmfH), "Reconstruction by NMF")
 

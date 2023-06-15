@@ -53,4 +53,4 @@ def inv_normalize_data(target, std):
     #same as above
     return target * std
 
-X_clean = normalize_data(X_clean)
+# X_clean = normalize_data(X_clean)

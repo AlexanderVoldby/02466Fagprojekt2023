@@ -1,21 +1,23 @@
 import torch
+import numpy as np
 import scipy
 from torch.optim import Adam, lr_scheduler
 from helpers.data import X, X_clean
 from helpers.callbacks import ChangeStopper
-from helpers.losses import frobeniusLoss, ShiftNMFLoss
+from helpers.losses import frobeniusLoss
 import matplotlib.pyplot as plt
 
 
 class ShiftNMF(torch.nn.Module):
-    def __init__(self, X, rank, lr=0.2, alpha=1e-8, patience=10, factor=0.9):
+    def __init__(self, X, rank, lr=1000, alpha=1e-8, patience=10, factor=0.9):
         super().__init__()
 
         self.rank = rank
+        self.alpha = alpha
         self.X = torch.tensor(X)
         self.N, self.M = X.shape
         self.softplus = torch.nn.Softplus()
-        self.lossfn = ShiftNMFLoss(torch.fft.fft(self.X))
+        self.lossfn = frobeniusLoss(torch.fft.fft(self.X))
         
         # Initialization of Tensors/Matrices a and b with size NxR and RxM
         self.W = torch.nn.Parameter(torch.randn(self.N, rank, requires_grad=True)*5)
@@ -46,7 +48,7 @@ class ShiftNMF(torch.nn.Module):
         V = torch.einsum('NdM,dM->NM', Wf, Hft)
         return V
 
-    def fit(self, verbose=False, return_loss=False, max_iter = 20000):
+    def fit(self, verbose=False, return_loss=False, max_iter = 30000):
         running_loss = []
         iters = 0
         while not self.stopper.trigger() and iters < max_iter:
@@ -77,6 +79,7 @@ class ShiftNMF(torch.nn.Module):
             if verbose:
                 print(f"epoch: {len(running_loss)}, Loss: {loss.item()}", end='\r')
 
+
         W = self.softplus(self.W).detach().numpy()
         H = self.softplus(self.H).detach().numpy()
         tau = self.tau().detach().numpy()
@@ -98,7 +101,7 @@ if __name__ == "__main__":
     targets = mat.get('yData')
     target_labels = mat.get('yLabels')
     axis = mat.get("Axis")
-    nmf = ShiftNMF(X, 3)
+    nmf = ShiftNMF(X_clean, 5)
     W, H, tau = nmf.fit(verbose=True)
 
     plt.figure()

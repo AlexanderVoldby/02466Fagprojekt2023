@@ -127,11 +127,19 @@ class MVR_NMF(torch.nn.Module):
 
 if __name__ == "__main__":
     from helpers.callbacks import explained_variance
-    from helpers.data import X_clean
+    import scipy
     import matplotlib.pyplot as plt
-    mvr_nmf = MVR_NMF(X_clean, 6, regularization=1e-10, normalization=2)
-    W, H = mvr_nmf.fit()
-    print(f"Explained variance MVR_NMF: {explained_variance(X_clean, mvr_nmf.forward().detach().numpy())}")
+
+    mat = scipy.io.loadmat('helpers/data/NMR_mix_DoE.mat')
+
+    X = mat.get('xData')
+    targets = mat.get('yData')
+    target_labels = mat.get('yLabels')
+    axis = mat.get("Axis")
+
+    mvr_nmf = MVR_NMF(X, 3, regularization=1e-40, normalization=2)
+    W, H = mvr_nmf.fit(verbose=True)
+    print(f"Explained variance MVR_NMF: {explained_variance(X, mvr_nmf.forward().detach().numpy())}")
     plt.figure()
     for vec in H:
         plt.plot(vec)

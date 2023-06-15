@@ -2,6 +2,7 @@ import torch
 from torch.optim import Adam, lr_scheduler, SGD
 from helpers.callbacks import ChangeStopper
 from helpers.losses import frobeniusLoss
+from helpers.data import X_clean
 from helpers.losses import ShiftNMFLoss
 import helpers.initializers as init
 import numpy as np
@@ -95,7 +96,7 @@ class torchShiftAADisc(torch.nn.Module):
         
         return x
 
-    def fit(self, verbose=False, return_loss=False, max_iter=1e10):
+    def fit(self, verbose=False, return_loss=False, max_iter=15000):
         self.stopper.reset()
         # Convergence criteria
         running_loss = []
@@ -158,7 +159,7 @@ class torchShiftAADisc(torch.nn.Module):
 
             # print loss
             if verbose:
-                print(f"epoch: {len(running_loss)}, Loss: {1-loss.item()}, Tau: {np.linalg.norm(self.tau().detach().numpy())}", end="\r")
+                print(f"epoch: {len(running_loss)}, Explained variance: {1-loss.item()}, Tau: {np.linalg.norm(self.tau().detach().numpy())}", end="\r")
         
         C = self.softmax(self.C_tilde)
         S = self.softmax(self.S_tilde)
@@ -179,17 +180,13 @@ if __name__ == "__main__":
     # import numpy as np
     import matplotlib.pyplot as plt
     import scipy.io
-    mat = scipy.io.loadmat('helpers/data/NMR_mix_DoE.mat')
 
     #Get X and Labels. Probably different for the other dataset, but i didn't check :)
-    X = mat.get('xData')
-    X = X[:10]
-    N, M = X.shape
-    rank = 3
+    rank = 7
     D = rank
-    AA = torchShiftAADisc(X, rank, lr=0.3)
+    AA = torchShiftAADisc(X_clean, rank, lr=0.2)
     print("test")
-    C,S, tau = AA.fit(verbose=True, max_iter=100)
+    C, S, tau = AA.fit(verbose=True, max_iter=50000)
 
     recon = AA.recon.detach().resolve_conj().numpy()
     A = torch.fft.ifft(AA.A_F).detach().numpy()
