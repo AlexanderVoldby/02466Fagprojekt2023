@@ -58,6 +58,7 @@ if __name__ == "__main__":
     std = [10, 20, 50]
     H = np.array([gauss(m, s, np.arange(0, 1000, 0.1)) for m, s in list(zip(mean, std))])
     X = shift_dataset(W, H, tau)
+    np.savetxt("Results/shifted_dataset/data.txt", X)
 
     (best_W, best_H, best_tau), loss = train_n_times(8, ShiftNMF, X, 3, alpha=1e-9, lr=0.1)
     np.savetxt("Results/shifted_dataset/shiftNMF_disc_H.txt", best_H)

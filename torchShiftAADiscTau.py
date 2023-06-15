@@ -7,7 +7,7 @@ import helpers.initializers as init
 
 
 class torchShiftAADisc(torch.nn.Module):
-    def __init__(self, X, rank, alpha=1e-9, lr = 10, factor = 0.9, patience = 5, fs_init = False, min_imp = 1e-4):
+    def __init__(self, X, rank, alpha=1e-9, lr = 10, factor = 0.9, patience = 5, fs_init = False, min_imp = 1e-9):
         super(torchShiftAADisc, self).__init__()
 
         # Shape of Matrix for reproduction
@@ -29,7 +29,7 @@ class torchShiftAADisc(torch.nn.Module):
         # NxD (S) *  DxM (A) = NxM (SA)
         if fs_init:
             # S, C = init.fit_s(self.X, C, epochs=50)
-            C, S  = init.init_C_S(X, rank, epochs=50, return_tilde=True)
+            C, S = init.init_C_S(X, rank, epochs=50, return_tilde=True)
             
             self.C_tilde = torch.nn.Parameter(torch.tensor(C, requires_grad=True, dtype=torch.double))
             self.S_tilde = torch.nn.Parameter(torch.tensor(S, requires_grad=True, dtype=torch.double))
@@ -68,7 +68,7 @@ class torchShiftAADisc(torch.nn.Module):
         X_F = torch.fft.fft(self.X)
 
         #Aligned data (per component)
-        X_F_align = torch.einsum('NM,NdM->NdM',X_F, omega_neg)
+        X_F_align = torch.einsum('NM,NdM->NdM', X_F, omega_neg)
         #X_align = torch.fft.ifft(X_F_align)
         #The A matrix, (d,M) A, in frequency domain
         #self.A = torch.einsum('dN,NdM->dM', self.C(), X_align)
@@ -85,7 +85,7 @@ class torchShiftAADisc(torch.nn.Module):
         
         return x
 
-    def fit(self, verbose=False, return_loss=False, max_iter=15000, tau_iter=0, tau_thres = 1e-5):
+    def fit(self, verbose=False, return_loss=False, max_iter=20000, tau_iter=0, tau_thres = 1e-5):
         self.stopper.reset()
         # Convergence criteria
         running_loss = []

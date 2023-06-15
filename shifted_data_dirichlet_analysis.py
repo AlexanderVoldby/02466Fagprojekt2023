@@ -64,25 +64,9 @@ shift_S = np.loadtxt(dir+"shiftAA_disc_S.txt")
 shift_AA_tau = np.loadtxt(dir+"shiftAA_disc_tau.txt", dtype=np.complex_)
 shift_AA_tau = shift_AA_tau.real
 
-# Artificial data
-N, M, d = 10, 10000, 3
-W = np.random.dirichlet(np.ones(d), N)
-W = np.append(W, [[1, 0, 0]], axis=0)
-W = np.append(W, [[0, 1, 0]], axis=0)
-W = np.append(W, [[0, 0, 1]], axis=0)
-N = N + 3
-
-# W = np.random.rand(N, d)
-# Random gaussian shifts
-tau = np.round(np.random.randn(N, d)*200)
-# Purely positive underlying signals. I define them as 3 gaussian peaks with random mean and std.
-mean = [40, 300, 700]
-std = [10, 20, 7]
-t = np.arange(0, 1000, 0.1)
-H = np.array([gauss(m, s, t) for m, s in list(zip(mean, std))])
-
-X = shift_NMF_dataset(W, H, tau)
+X = np.loadtxt("Results/shifted_dataset_dirichlet/data.txt", dtype=np.complex_)
 data = X.real
+W = np.loadtxt("Results/shifted_dataset_dirichlet/mixing.txt")
 
 shift_AA_recon, shiftAA_comp = shift_AA_dataset(X, shift_C, shift_S, shift_AA_tau)
 shift_NMF_recon = shift_NMF_dataset(shift_W, shift_H, shift_tau)
@@ -98,10 +82,6 @@ print(f"Normalized mutual information with the mixing matrices")
 print(f"ShiftNMF: {NMI(W, shift_W)}")
 print(f"ShiftAA: {NMI(W, shift_S)}")
 
-plot_data(H, "Ground truth signals")
-plot_matrix(W, "The mixing")
-plot_matrix(tau, "The shifts")
-plot_data(data, "Shifted and mixed dataset")
 
 plot_latent_components(shift_H, ["1", "2", "3"], "Latent components found by shiftNMF")
 plot_data(shift_NMF_recon, "Dataset reconstructed by shiftNMF")

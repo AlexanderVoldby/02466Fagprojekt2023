@@ -59,7 +59,8 @@ if __name__ == "__main__":
 
     # W = np.random.rand(N, d)
     # Random gaussian shifts
-    tau = np.round(np.random.randn(N, d)*200)
+    tau = np.random.randint(-300, 300, (N-3, d))
+    tau = np.vstack((tau, np.zeros((3, d))))
     # Purely positive underlying signals. I define them as 3 gaussian peaks with random mean and std.
     mean = [40, 300, 700]
     std = [10, 20, 7]
@@ -67,18 +68,19 @@ if __name__ == "__main__":
     H = np.array([gauss(m, s, t) for m, s in list(zip(mean, std))])
 
     X = shift_dataset(W, H, tau)
-
+    np.savetxt("Results/shifted_dataset_dirichlet/data.txt", X)
+    np.savetxt("Results/shifted_dataset_dirichlet/mixing.txt", W)
     plot_data(H, "Ground truth signals")
     plot_matrix(W, "The mixing")
     plot_matrix(tau, "The shifts")
     plot_data(X, "Shifted and mixed dataset")
 
-    (best_W, best_H, best_tau), loss = train_n_times(10, ShiftNMF, X, 3, alpha=1e-9, lr=0.1)
+    (best_W, best_H, best_tau), loss = train_n_times(1, ShiftNMF, X, 3, alpha=1e-9, lr=0.1, min_imp=1e-9)
     np.savetxt("Results/shifted_dataset_dirichlet/shiftNMF_disc_H.txt", best_H)
     np.savetxt("Results/shifted_dataset_dirichlet/shiftNMF_disc_W.txt", best_W)
     np.savetxt("Results/shifted_dataset_dirichlet/shiftNMF_disc_tau.txt", best_tau)
 
-    (best_C, best_S, best_AA_tau), loss2 = train_n_times(10, torchShiftAADisc, X, 3, alpha=1e-9, lr=0.1)
+    (best_C, best_S, best_AA_tau), loss2 = train_n_times(1, torchShiftAADisc, X, 3, alpha=1e-9, lr=0.1, min_imp=1e-9)
     np.savetxt("Results/shifted_dataset_dirichlet/shiftAA_disc_C.txt", best_C)
     np.savetxt("Results/shifted_dataset_dirichlet/shiftAA_disc_S.txt", best_S)
     np.savetxt("Results/shifted_dataset_dirichlet/shiftAA_disc_tau.txt", best_AA_tau)
