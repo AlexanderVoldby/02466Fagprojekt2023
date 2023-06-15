@@ -1,12 +1,12 @@
 import torch
 from torch.optim import Adam, lr_scheduler
-from helpers.callbacks import ChangeStopper
+from helpers.callbacks import ChangeStopper, ImprovementStopper
 from helpers.losses import frobeniusLoss
 from helpers.initializers import FurthestSum
 
 
 class torchAA(torch.nn.Module):
-    def __init__(self, X, rank, alpha=1e-9, lr = 0.2, factor = 0.9, patience = 5):
+    def __init__(self, X, rank, alpha=1e-9, lr = 0.2, factor = 0.9, patience = 5, min_imp = 1e-4):
         super(torchAA, self).__init__()
 
         # Shape of Matrix for reproduction
@@ -34,6 +34,10 @@ class torchAA(torch.nn.Module):
         
         self.optimizer = Adam(self.parameters(), lr=lr)
         self.stopper = ChangeStopper(alpha=alpha, patience=patience)
+        self.improvement_stopper = ImprovementStopper(min_improvement=min_imp)
+        
+        
+        
         if factor < 1:
             self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=factor, patience=patience-2)
         else:
@@ -55,7 +59,7 @@ class torchAA(torch.nn.Module):
         # Convergence criteria
         running_loss = []
 
-        while not self.stopper.trigger():
+        while not self.stopper.trigger() and not self.improvement_stopper.trigger():
             # zero optimizer gradient
             self.optimizer.zero_grad()
 
@@ -75,10 +79,11 @@ class torchAA(torch.nn.Module):
 
             # count with early stopping
             self.stopper.track_loss(loss)
+            self.improvement_stopper.track_loss(loss)
 
             # print loss
             if verbose:
-                print(f"Epoch: {len(running_loss)}, Explained variance: {1-loss.item()}", end='\r')
+                print(f"Epoch: {len(running_loss)}, Loss: {loss.item()}", end='\r')
 
         C = self.softmax(self.C)
         S = self.softmax(self.S)

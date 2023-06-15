@@ -1,23 +1,33 @@
 import torch
 from torch.optim import Adam, lr_scheduler
-from helpers.callbacks import ChangeStopper
+from helpers.callbacks import ChangeStopper, ImprovementStopper
 from helpers.losses import frobeniusLoss, VolLoss
 
 
 class NMF(torch.nn.Module):
-    def __init__(self, X, rank, alpha=1e-9, lr=0.5, patience=5, factor=0.9):
+    def __init__(self, X, rank, alpha=1e-6, lr=0.1, patience=5, factor=0.9, min_imp=1e-4):
         super().__init__()
 
         n_row, n_col = X.shape
         self.softplus = torch.nn.Softplus()
-        self.lossfn = frobeniusLoss(torch.tensor(X))
+        
+        self.X = torch.tensor(X)
+        self.std = torch.std(self.X)
+        self.X = self.X/self.std
+        
+        self.lossfn = frobeniusLoss(torch.tensor(self.X))
 
         # Initialization of Tensors/Matrices a and b with size NxR and RxM
-        self.W = torch.nn.Parameter(torch.randn(n_row, rank, requires_grad=True)*3)
-        self.H = torch.nn.Parameter(torch.randn(rank, n_col, requires_grad=True)*3)
+        self.W = torch.nn.Parameter(torch.randn(n_row, rank, requires_grad=True))
+        # print(torch.mean(self.X, dim=0).shape)
+        self.H = torch.nn.Parameter(torch.randn(rank, n_col, requires_grad=True))
+        # print(torch.mean(self.X, dim=0).shape)
 
         self.optimizer = Adam(self.parameters(), lr=lr)
         self.stopper = ChangeStopper(alpha=alpha, patience=patience+5)
+        self.improvement_stopper = ImprovementStopper(min_improvement=min_imp)
+        
+        
         if factor < 1:
             self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=factor, patience=patience-2)
         else:
@@ -29,7 +39,7 @@ class NMF(torch.nn.Module):
 
     def fit(self, verbose=False, return_loss=False):
         running_loss = []
-        while not self.stopper.trigger():
+        while not self.stopper.trigger() and not self.improvement_stopper.trigger():
             # zero optimizer gradient
             self.optimizer.zero_grad()
 
@@ -48,13 +58,14 @@ class NMF(torch.nn.Module):
 
             running_loss.append(loss.item())
             self.stopper.track_loss(loss)
+            self.improvement_stopper.track_loss(loss)
 
             # print loss
             if verbose:
                 print(f"epoch: {len(running_loss)}, Loss: {loss.item()}", end='\r')
 
         W = self.softplus(self.W).detach().numpy()
-        H = self.softplus(self.H).detach().numpy()
+        H = (self.softplus(self.H)*self.std).detach().numpy()
 
         if return_loss:
             return W, H, running_loss
@@ -118,7 +129,7 @@ class MVR_NMF(torch.nn.Module):
 
         W = self.softmax(self.W).detach().numpy()
         H = self.softplus(self.H).detach().numpy()
-
+        
         if return_loss:
             return W, H, running_loss
         else:
@@ -127,21 +138,15 @@ class MVR_NMF(torch.nn.Module):
 
 if __name__ == "__main__":
     from helpers.callbacks import explained_variance
-    import scipy
+    from helpers.data import X_clean
     import matplotlib.pyplot as plt
-
-    mat = scipy.io.loadmat('helpers/data/NMR_mix_DoE.mat')
-
-    X = mat.get('xData')
-    targets = mat.get('yData')
-    target_labels = mat.get('yLabels')
-    axis = mat.get("Axis")
-
-    mvr_nmf = MVR_NMF(X, 3, regularization=1e-40, normalization=2)
+    import numpy as np
+    mvr_nmf = NMF(X_clean, 3)
     W, H = mvr_nmf.fit(verbose=True)
-    print(f"Explained variance MVR_NMF: {explained_variance(X, mvr_nmf.forward().detach().numpy())}")
+    print(f"Explained variance MVR_NMF: {explained_variance(X_clean, np.matmul(W, H))}")
     plt.figure()
     for vec in H:
         plt.plot(vec)
+
     plt.title("H")
     plt.show()

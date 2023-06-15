@@ -1,35 +1,42 @@
 import torch
-import numpy as np
-import scipy
 from torch.optim import Adam, lr_scheduler
 from helpers.data import X, X_clean
-from helpers.callbacks import ChangeStopper
-from helpers.losses import frobeniusLoss
+from helpers.callbacks import ChangeStopper, ImprovementStopper
+from helpers.losses import frobeniusLoss, ShiftNMFLoss
 import matplotlib.pyplot as plt
 
 
 class ShiftNMF(torch.nn.Module):
-    def __init__(self, X, rank, lr=1000, alpha=1e-8, patience=10, factor=0.9):
+    def __init__(self, X, rank, lr=0.2, alpha=1e-8, patience=10, factor=0.9, min_imp=1e-4):
         super().__init__()
 
         self.rank = rank
-        self.alpha = alpha
         self.X = torch.tensor(X)
+        self.std = torch.std(self.X)
+        self.X = self.X / self.std
+        
         self.N, self.M = X.shape
+
         self.softplus = torch.nn.Softplus()
         self.lossfn = frobeniusLoss(torch.fft.fft(self.X))
         
         # Initialization of Tensors/Matrices a and b with size NxR and RxM
-        self.W = torch.nn.Parameter(torch.randn(self.N, rank, requires_grad=True)*5)
-        self.H = torch.nn.Parameter(torch.randn(rank, self.M, requires_grad=True)*5)
+        self.W = torch.nn.Parameter(torch.randn(self.N, rank, requires_grad=True)*0)
+        self.H = torch.nn.Parameter(torch.randn(rank, self.M, requires_grad=True)*0)
         # self.tau = torch.nn.Parameter(torch.randn(self.N, self.rank)*10, requires_grad=True)
         self.tau_tilde = torch.nn.Parameter(torch.zeros(self.N, self.rank, requires_grad=False))
         self.tau = lambda: self.tau_tilde
         
         # Prøv også med SGD
         self.stopper = ChangeStopper(alpha=alpha, patience=patience + 5)
+        
         self.optimizer = Adam(self.parameters(), lr=lr)
-        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=factor, patience=patience)
+        self.improvement_stopper = ImprovementStopper(min_improvement=min_imp)
+        
+        if factor < 1:
+            self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=factor, patience=patience-2)
+        else:
+            self.scheduler = None
 
     def forward(self):
         # Get half of the frequencies
@@ -48,11 +55,12 @@ class ShiftNMF(torch.nn.Module):
         V = torch.einsum('NdM,dM->NM', Wf, Hft)
         return V
 
-    def fit(self, verbose=False, return_loss=False, max_iter = 30000):
+    def fit(self, verbose=False, return_loss=False, max_iter = 15000, tau_iter=0, tau_thres=1e-5):
         running_loss = []
-        iters = 0
-        while not self.stopper.trigger() and iters < max_iter:
-            iters += 1
+        self.iters = 0
+        self.tau_iter = tau_iter
+        while not self.stopper.trigger() and self.iters < max_iter and not self.improvement_stopper.trigger():
+            self.iters += 1
             # zero optimizer gradient
             self.optimizer.zero_grad()
 
@@ -64,28 +72,35 @@ class ShiftNMF(torch.nn.Module):
             loss.backward()
 
             change = torch.sign(self.tau_tilde.grad)
-            #set gradient 0 - possibly not needed since tau tilde is overwritten
+            grad = self.tau_tilde.grad
+            #set gradient 0, such that the tau is not updated by the optimizer
             self.tau_tilde.grad = self.tau_tilde.grad * 0
             #update tau
-            self.tau_tilde = torch.nn.Parameter(self.tau_tilde + change)
+            if self.iters > tau_iter:
+                
+                change = (torch.abs(grad) > tau_thres) * change
+                
+                self.tau_tilde = torch.nn.Parameter(self.tau_tilde + change)
             
             # Update W, H and tau
             self.optimizer.step()
-            self.scheduler.step(loss)
+            if self.scheduler != None:
+                self.scheduler.step(loss)
+            
             running_loss.append(loss.item())
             self.stopper.track_loss(loss)
-
+            self.improvement_stopper.track_loss(loss)
+            
             # print loss
             if verbose:
-                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}", end='\r')
-
+                print(f"epoch: {len(running_loss)}, Loss: {loss.item()}, Tau: {torch.norm(self.tau())}", end='\r')
 
         W = self.softplus(self.W).detach().numpy()
-        H = self.softplus(self.H).detach().numpy()
+        H = (self.softplus(self.H)*self.std).detach().numpy()
         tau = self.tau().detach().numpy()
 
         output = self.forward()
-        self.recon = torch.fft.ifft(output)
+        self.recon = torch.fft.ifft(output)*self.std
 
         if return_loss:
             return W, H, tau, running_loss
@@ -94,14 +109,17 @@ class ShiftNMF(torch.nn.Module):
 
 
 if __name__ == "__main__":
+    import scipy.io
+    import numpy as np
     mat = scipy.io.loadmat('helpers/data/NMR_mix_DoE.mat')
-
     # Get X and Labels. Probably different for the other dataset, but i didn't check :)
     X = mat.get('xData')
+    X = X[:10]
+    # X = X / np.std(X)
     targets = mat.get('yData')
     target_labels = mat.get('yLabels')
     axis = mat.get("Axis")
-    nmf = ShiftNMF(X_clean, 5)
+    nmf = ShiftNMF(X, 3, lr=0.1)
     W, H, tau = nmf.fit(verbose=True)
 
     plt.figure()

@@ -41,8 +41,9 @@ W = np.append(W, [[0,0,1]], axis=0)
 N = N+3
 
 #W = np.random.rand(N, d)
+shift = 200
 # Random gaussian shifts
-tau = np.zeros(shape=(N, d))
+tau = np.random.randint(-shift, shift, size=(N, d))
 #tau = np.random.randint(0, 1000, size=(N, d))
 # Purely positive underlying signals. I define them as 3 gaussian peaks with random mean and std.
 mean = [40, 300, 700]

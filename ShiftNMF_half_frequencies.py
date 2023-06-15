@@ -24,9 +24,12 @@ class ShiftNMF(torch.nn.Module):
         self.tau = torch.nn.Parameter(torch.randn(self.N, self.rank)*10, requires_grad=True)
         # Prøv også med SGD
         self.stopper = ChangeStopper(alpha=alpha, patience=patience + 5)
-        self.optim = Adam(self.parameters(), lr=lr)
-        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optim, mode='min', factor=factor, patience=patience)
-
+        self.optimizer = Adam(self.parameters(), lr=lr)
+        if factor < 1:
+            self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=factor, patience=patience-2)
+        else:
+            self.scheduler = None
+        
     def forward(self):
         # Get half of the frequencies
         Nf = self.M // 2 + 1
@@ -59,7 +62,8 @@ class ShiftNMF(torch.nn.Module):
 
             # Update W, H and tau
             self.optimizer.step()
-            self.scheduler.step(loss)
+            if self.scheduler != None:
+                self.scheduler.step(loss)
             running_loss.append(loss.item())
             self.stopper.track_loss(loss)
 

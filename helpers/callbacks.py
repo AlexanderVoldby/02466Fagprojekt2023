@@ -126,6 +126,28 @@ class ChangeStopper(Stopper):
         self.loss = None
         self.counter = 0
 
+class ImprovementStopper(Stopper):
+    def __init__(self, patience=10, min_improvement=1e-4):
+        self.patience = patience
+        self.counter = 0
+        self.best_loss = float('inf')
+        self.min_improvement = min_improvement
+    
+    def track_loss(self, loss):
+        if loss < self.best_loss - self.min_improvement:
+            self.best_loss = loss
+            self.counter = 0
+        else:
+            self.counter += 1
+    
+    def trigger(self):
+        return self.counter >= self.patience
+    
+    def reset(self):
+        self.counter = 0
+        self.best_loss = float('inf')
+            
+
 class ConvergenceCriterion:
     def __init__(self, x, convergence_threshold, num_epochs_convergence):
         self.norm = torch.linalg.matrix_norm(x, ord="fro")**2

@@ -52,8 +52,10 @@ class torchShiftAA(torch.nn.Module):
 
         self.optimizer = Adam(self.parameters(), lr=lr)
         self.stopper = ChangeStopper(alpha=alpha, patience=patience)
-        self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=factor, patience=patience-2)
-
+        if factor < 1:
+            self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optimizer, mode='min', factor=factor, patience=patience-2)
+        else:
+            self.scheduler = None
 
     def forward(self):
         # Implementation of shift AA.
@@ -100,7 +102,8 @@ class torchShiftAA(torch.nn.Module):
 
             # Update A and B
             self.optimizer.step()
-            self.scheduler.step(loss)
+            if self.scheduler != None:
+                self.scheduler.step(loss)
             # append loss for graphing
             running_loss.append(loss.item())
 
@@ -134,12 +137,12 @@ if __name__ == "__main__":
     mat = scipy.io.loadmat('helpers/data/NMR_mix_DoE.mat')
 
     #Get X and Labels. Probably different for the other dataset, but i didn't check :)
-    X_get = mat.get('xData')
+    X = mat.get('xData')
     # N, M = X.shape
     # X = X[:10]
     rank = 3
     D = rank
-    AA = torchShiftAA(X_get, rank, lr=0.3)
+    AA = torchShiftAA(X, rank, lr=0.3)
     print("test")
     C,S, tau = AA.fit(verbose=True)
 
