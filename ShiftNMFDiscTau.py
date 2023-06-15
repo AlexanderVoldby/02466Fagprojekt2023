@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 
 class ShiftNMF(torch.nn.Module):
-    def __init__(self, X, rank, lr=0.2, alpha=1e-8, patience=10, factor=0.9, min_imp=1e-9):
+    def __init__(self, X, rank, lr=0.2, alpha=1e-8, patience=10, factor=0.9, min_imp=1e-6):
         super().__init__()
 
         self.rank = rank
@@ -24,7 +24,7 @@ class ShiftNMF(torch.nn.Module):
         self.W = torch.nn.Parameter(torch.randn(self.N, rank, requires_grad=True))
         self.H = torch.nn.Parameter(torch.randn(rank, self.M, requires_grad=True))
         # self.tau = torch.nn.Parameter(torch.randn(self.N, self.rank)*10, requires_grad=True)
-        self.tau_tilde = torch.nn.Parameter(torch.randn(self.N, self.rank, requires_grad=False)*20)
+        self.tau_tilde = torch.nn.Parameter(torch.zeros(self.N, self.rank, requires_grad=False))
         self.tau = lambda: self.tau_tilde
         
         # Prøv også med SGD
@@ -55,7 +55,7 @@ class ShiftNMF(torch.nn.Module):
         V = torch.einsum('NdM,dM->NM', Wf, Hft)
         return V
 
-    def fit(self, verbose=False, return_loss=False, max_iter = 30000, tau_iter=0, tau_thres=1e-5):
+    def fit(self, verbose=False, return_loss=False, max_iter = 15000, tau_iter=0, tau_thres=1e-5):
         running_loss = []
         self.iters = 0
         self.tau_iter = tau_iter
