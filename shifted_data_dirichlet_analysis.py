@@ -83,11 +83,18 @@ NMF_H = np.loadtxt(dir+"H_reg_nmf.txt")
 NMF_W = np.loadtxt(dir+"W_reg_nmf.txt")
 
 X = np.loadtxt(dir+"X_with_shifts.txt", dtype=np.complex_)
+W = np.loadtxt(dir+"W_true.txt")
+H = np.loadtxt(dir+"H_true.txt")
+tau = np.loadtxt(dir+"true_tau.txt")
 data = X.real
-#W = np.loadtxt("Results/shifted_dataset_dirichlet/mixing.txt")
-# H =
-AA_comp = np.matmul(data, AA_C)
-AA_recon = np.matmul(AA_comp, AA_S)
+
+plot_data(X, "Shifted dataset")
+plot_latent_components(H, ["1", "2", "3"], "True latent components")
+plot_matrix(W, "True mixing")
+plot_matrix(tau, "True shifts")
+
+AA_comp = np.matmul(AA_C, data)
+AA_recon = np.matmul(AA_S, AA_comp)
 NMF_recon = np.matmul(NMF_W, NMF_H)
 
 shift_AA_recon, shiftAA_comp = shift_AA_dataset(X, shift_C, shift_S, shift_AA_tau)
@@ -95,14 +102,21 @@ shift_NMF_recon = shift_NMF_dataset(shift_W, shift_H, shift_tau)
 
 exp_var_shiftNMF = explained_variance(data, shift_NMF_recon.real)
 exp_var_shiftAA = explained_variance(data, shift_AA_recon.real)
+exp_var_NMF = explained_variance(data, NMF_recon)
+exp_var_AA = explained_variance(data, AA_recon)
+
 
 print("Explained variance")
 print(f"ShiftNMF: {exp_var_shiftNMF}")
 print(f"ShiftAA: {exp_var_shiftAA}")
+print(f"ShiftAA: {exp_var_NMF}")
+print(f"ShiftAA: {exp_var_AA}")
 
 print(f"Normalized mutual information with the mixing matrices")
-#print(f"ShiftNMF: {NMI(W, shift_W)}")
-#print(f"ShiftAA: {NMI(W, shift_S)}")
+print(f"ShiftNMF: {NMI(W, shift_W)}")
+print(f"ShiftAA: {NMI(W, shift_S)}")
+print(f"NMF: {NMI(W, AA_S)}")
+print(f"AA: {NMI(W, NMF_W)}")
 
 plot_latent_components(NMF_H, ["1", "2", "3"], "Latent components found by NMF")
 plot_data(NMF_recon, "Dataset reconstructed by NMF")
@@ -113,9 +127,9 @@ plot_data(AA_recon, "Dataset reconstructed by AA")
 plot_latent_components(shift_H, ["1", "2", "3"], "Latent components found by shiftNMF")
 plot_data(shift_NMF_recon, "Dataset reconstructed by shiftNMF")
 plot_matrix(shift_W, "Mixing determined by shiftNMF")
-plot_matrix(shift_tau, "Shifts determined by shiftNMF")
+plot_matrix(shift_tau.real, "Shifts determined by shiftNMF")
 
 plot_latent_components(shiftAA_comp, ["1", "2", "3"], "Latent components found by shiftAA")
 plot_data(shift_AA_recon.real, "Dataset reconstructed by shiftAA")
 plot_matrix(shift_S, "Mixing determined by shiftAA")
-plot_matrix(shift_AA_tau, "Shifts determined by shiftAA")
+plot_matrix(shift_AA_tau.real, "Shifts determined by shiftAA")
