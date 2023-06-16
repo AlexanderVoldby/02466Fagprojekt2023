@@ -2,6 +2,7 @@ import torch
 from torch.optim import Adam, lr_scheduler
 from helpers.callbacks import ChangeStopper, ImprovementStopper
 from helpers.losses import frobeniusLoss, VolLoss
+import scipy
 
 
 class NMF(torch.nn.Module):
@@ -74,7 +75,7 @@ class NMF(torch.nn.Module):
 
 
 class MVR_NMF(torch.nn.Module):
-    def __init__(self, X, rank, regularization=1e-9, normalization=2, lr=20, alpha=1e-8, patience=5, factor=0.9):
+    def __init__(self, X, rank, regularization=0, normalization=1, lr=200, alpha=1e-8, patience=5, factor=0.9):
         super().__init__()
 
         n_row, n_col = X.shape
@@ -92,16 +93,25 @@ class MVR_NMF(torch.nn.Module):
         self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optim, mode='min', factor=factor, patience=patience)
         self.stopper = ChangeStopper(alpha=alpha, patience=patience+5)
 
-    def forward(self):
+    def normalize(self):
         if self.normalization == 2:
-            norm = torch.linalg.vector_norm(self.W, dim=1)
+            norm = torch.linalg.vector_norm(self.softplus(self.W), dim=1)
             exp_norm = norm.unsqueeze(0).expand(self.W.size(1), -1).T
-            WH = torch.matmul(self.W / exp_norm, self.softplus(self.H))
+            W = self.softplus(self.W) / exp_norm
         elif self.normalization == 1:
-            WH = torch.matmul(self.softmax(self.W), self.softplus(self.H))
+            W = self.softmax(self.W)
         else:
             raise ValueError(f"{self.normalization} is not a currently supported normalization technique (must be 1 or 2)")
+
+        return W
+
+    def forward(self):
+
+        W = self.normalize()
+        WH = torch.matmul(W, self.softplus(self.H))
+
         return WH
+
 
     def fit(self, verbose=False, return_loss=False):
         running_loss = []
@@ -127,7 +137,7 @@ class MVR_NMF(torch.nn.Module):
             if verbose:
                 print(f"epoch: {len(running_loss)}, Loss: {loss.item()}")
 
-        W = self.softmax(self.W).detach().numpy()
+        W = self.normalize().detach().numpy()
         H = self.softplus(self.H).detach().numpy()
         
         if return_loss:
@@ -141,9 +151,16 @@ if __name__ == "__main__":
     from helpers.data import X_clean
     import matplotlib.pyplot as plt
     import numpy as np
-    mvr_nmf = NMF(X_clean, 3)
+
+    mat = scipy.io.loadmat('helpers/data/NMR_mix_DoE.mat')
+
+    X = mat.get('xData')
+    targets = mat.get('yData')
+    target_labels = mat.get('yLabels')
+    axis = mat.get("Axis")
+    mvr_nmf = MVR_NMF(X, 3)
     W, H = mvr_nmf.fit(verbose=True)
-    print(f"Explained variance MVR_NMF: {explained_variance(X_clean, np.matmul(W, H))}")
+    print(f"Explained variance MVR_NMF: {explained_variance(X, np.matmul(W, H))}")
     plt.figure()
     for vec in H:
         plt.plot(vec)

@@ -20,7 +20,7 @@ def plot_components(matrix, title):
     plt.show()
 
 def regularization_experiment(reg, X, reg_mode, n_train=5, components=3):
-    print(f"Current regularization strength: {reg}")
+    # print(f"Current regularization strength: {reg}")
     (W, H), loss = train_n_times(n_train, MVR_NMF, X, components, regularization=reg, normalization=reg_mode)
     recon = np.matmul(W, H)
     explained_var = explained_variance(X, recon)
