@@ -3,7 +3,7 @@ import torch
 import pickle
 import matplotlib.pyplot as plt
 
-lower = -42
+lower = -50
 upper = -30
 regs = np.logspace(lower, upper, num=2*abs(lower-upper), endpoint=False)
 
