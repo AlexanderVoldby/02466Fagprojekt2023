@@ -6,7 +6,7 @@ from helpers.callbacks import explained_variance, plot_data, train_n_times
 import pickle
 from torchNMF import MVR_NMF
 
-lower = -42
+lower = -50
 upper = -30
 regs = np.logspace(lower, upper, num=2*abs(lower-upper), endpoint=False)
 num_regs = len(regs)
@@ -18,6 +18,7 @@ def plot_components(matrix, title):
         ax[i].plot(matrix[i])
     plt.suptitle(title)
     plt.show()
+
 
 def regularization_experiment(reg, X, reg_mode, n_train=5, components=3):
     # print(f"Current regularization strength: {reg}")

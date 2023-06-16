@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F
 from torch.optim import Adam, lr_scheduler
 from helpers.callbacks import ChangeStopper, ImprovementStopper
 from helpers.losses import frobeniusLoss, VolLoss
@@ -75,7 +76,7 @@ class NMF(torch.nn.Module):
 
 
 class MVR_NMF(torch.nn.Module):
-    def __init__(self, X, rank, regularization=0, normalization=1, lr=200, alpha=1e-8, patience=5, factor=0.9):
+    def __init__(self, X, rank, regularization=1e-45, normalization=1, lr=100, alpha=1e-8, patience=5, factor=0.9):
         super().__init__()
 
         n_row, n_col = X.shape
@@ -94,10 +95,10 @@ class MVR_NMF(torch.nn.Module):
         self.stopper = ChangeStopper(alpha=alpha, patience=patience+5)
 
     def normalize(self):
+
+
         if self.normalization == 2:
-            norm = torch.linalg.vector_norm(self.softplus(self.W), dim=1)
-            exp_norm = norm.unsqueeze(0).expand(self.W.size(1), -1).T
-            W = self.softplus(self.W) / exp_norm
+            W = F.normalize(self.softplus(self.W), p=1, dim=1)
         elif self.normalization == 1:
             W = self.softmax(self.W)
         else:
