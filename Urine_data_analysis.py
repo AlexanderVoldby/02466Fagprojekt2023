@@ -100,6 +100,9 @@ NMF_recon = np.matmul(NMF_W, NMF_H)
 shift_AA_recon, shiftAA_comp = shift_AA_dataset(X, shift_C, shift_S, shift_AA_tau)
 shift_NMF_recon = shift_NMF_dataset(shift_W, shift_H, shift_tau)
 
+shift_AA_recon_no_shifts, shiftAA_no_shift_comp = shift_AA_dataset(X, shift_C, shift_S, np.zeros(shift_AA_tau.shape))
+shift_NMF_recon_no_shifts = shift_NMF_dataset(shift_W, shift_H, np.zeros(shift_tau.shape))
+
 exp_var_shiftNMF = explained_variance(data, shift_NMF_recon.real)
 exp_var_shiftAA = explained_variance(data, shift_AA_recon.real)
 exp_var_NMF = explained_variance(data, NMF_recon)
@@ -133,3 +136,6 @@ plot_latent_components(shiftAA_comp, ["1", "2", "3"], "Latent components found b
 plot_data(shift_AA_recon.real, "Dataset reconstructed by shiftAA")
 plot_matrix(shift_S, "Mixing determined by shiftAA")
 plot_matrix(shift_AA_tau.real, "Shifts determined by shiftAA")
+
+plot_data(shift_NMF_recon_no_shifts, "Dataset reconstructed by shiftNMF without shifts")
+plot_data(shift_AA_recon_no_shifts, "Dataset reconstructed by shiftAA without shifts")
