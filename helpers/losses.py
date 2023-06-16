@@ -32,9 +32,8 @@ class VolLoss(torch.nn.Module):
         self.norm = torch.linalg.matrix_norm(self.X, ord="fro")**2
 
     def forward(self, x, h):
-        # Brug kun determinanten og normaliser 2-normen
         reg = self.alpha*torch.linalg.det(torch.matmul(h, h.T))
-        loss = torch.linalg.matrix_norm(self.X - x, ord='fro')**2/self.norm
+        loss = torch.linalg.matrix_norm(self.X - x, ord='fro')**2 / self.norm
         return reg + loss
 
 # Sparseness measure of the H-matrix
