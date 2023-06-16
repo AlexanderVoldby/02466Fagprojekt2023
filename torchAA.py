@@ -6,7 +6,7 @@ from helpers.initializers import FurthestSum
 
 
 class torchAA(torch.nn.Module):
-    def __init__(self, X, rank, alpha=1e-9, lr = 0.2, factor = 0.9, patience = 5, min_imp = 1e-4):
+    def __init__(self, X, rank, alpha=1e-9, lr = 0.2, factor = 0.9, patience = 5, min_imp = 1e-6):
         super(torchAA, self).__init__()
 
         # Shape of Matrix for reproduction

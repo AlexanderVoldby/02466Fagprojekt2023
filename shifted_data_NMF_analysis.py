@@ -70,18 +70,7 @@ AA_S = np.loadtxt(dir+"AA_S.txt")
 NMF_H = np.loadtxt(dir+"NMF_H.txt")
 NMF_W = np.loadtxt(dir+"NMF_W.txt")
 
-# Artificial data
-N, M, d = 10, 10000, 3
-W = np.random.randn(N, d)
-# Random gaussian shifts
-tau = np.round(np.random.randn(N, d)*100)
-# Purely positive underlying signals. I define them as 3 gaussian peaks with random mean and std.
-mean = [40, 300, 700]
-std = [10, 20, 50]
-H = np.array([gauss(m, s, np.arange(0, 1000, 0.1)) for m, s in list(zip(mean, std))])
-softplus = torch.nn.Softplus()
-softplus_W = softplus(torch.Tensor(W)).numpy()
-data = shift_NMF_dataset(softplus_W, H, tau).real
+data = np.loadtxt("Results/shifted_dataset/data.txt")
 
 AA_components = np.matmul(AA_C, data)
 

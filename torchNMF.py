@@ -5,7 +5,7 @@ from helpers.losses import frobeniusLoss, VolLoss
 
 
 class NMF(torch.nn.Module):
-    def __init__(self, X, rank, alpha=1e-6, lr=0.1, patience=5, factor=0.9, min_imp=1e-4):
+    def __init__(self, X, rank, alpha=1e-6, lr=0.1, patience=5, factor=0.9, min_imp=1e-6):
         super().__init__()
 
         n_row, n_col = X.shape
