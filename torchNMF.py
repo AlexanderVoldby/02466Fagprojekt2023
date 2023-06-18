@@ -153,14 +153,16 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     import numpy as np
 
-    mat = scipy.io.loadmat('helpers/data/NMR_mix_DoE.mat')
-
-    X = mat.get('xData')
-    targets = mat.get('yData')
-    target_labels = mat.get('yLabels')
-    axis = mat.get("Axis")
-    mvr_nmf = MVR_NMF(X, 3)
-    W, H = mvr_nmf.fit(verbose=True)
+    # mat = scipy.io.loadmat('helpers/data/NMR_mix_DoE.mat')
+    
+    # X = mat.get('xData')
+    # targets = mat.get('yData')
+    # target_labels = mat.get('yLabels')
+    # axis = mat.get("Axis")
+    X = X_clean
+    alpha = 1e-5
+    nmf = NMF(X, 6, lr=1, alpha = alpha, factor=1, patience=10)
+    W, H = nmf.fit(verbose=True)
     print(f"Explained variance MVR_NMF: {explained_variance(X, np.matmul(W, H))}")
     plt.figure()
     for vec in H:
