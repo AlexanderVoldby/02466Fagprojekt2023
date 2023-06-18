@@ -21,8 +21,8 @@ class ShiftNMF(torch.nn.Module):
         self.lossfn = frobeniusLoss(torch.fft.fft(self.X))
         
         # Initialization of Tensors/Matrices a and b with size NxR and RxM
-        self.W = torch.nn.Parameter(torch.randn(self.N, rank, requires_grad=True)*5)
-        self.H = torch.nn.Parameter(torch.randn(rank, self.M, requires_grad=True)*5)
+        self.W = torch.nn.Parameter(torch.randn(self.N, rank, requires_grad=True)*2)
+        self.H = torch.nn.Parameter(torch.randn(rank, self.M, requires_grad=True)*2)
         # self.tau = torch.nn.Parameter(torch.randn(self.N, self.rank)*10, requires_grad=True)
         self.tau_tilde = torch.nn.Parameter(torch.zeros(self.N, self.rank, requires_grad=False))
         self.tau = lambda: self.tau_tilde
@@ -111,15 +111,13 @@ class ShiftNMF(torch.nn.Module):
 if __name__ == "__main__":
     import scipy.io
     import numpy as np
-    mat = scipy.io.loadmat('helpers/data/NMR_mix_DoE.mat')
-    # Get X and Labels. Probably different for the other dataset, but i didn't check :)
-    X = mat.get('xData')
-    X = X[:10]
-    # X = X / np.std(X)
-    targets = mat.get('yData')
-    target_labels = mat.get('yLabels')
-    axis = mat.get("Axis")
-    nmf = ShiftNMF(X, 3, lr=0.1)
+    from helpers.data import X, X_clean
+
+    X  = X_clean
+
+    alpha = 1e-5
+
+    nmf = ShiftNMF(X, 3, lr=0.1, alpha = alpha, factor=1, patience=10)
     W, H, tau = nmf.fit(verbose=True)
 
     plt.figure()
