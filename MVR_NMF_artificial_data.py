@@ -19,8 +19,8 @@ def plot_matrix(mat, title):
     plt.title(title)
     plt.show()
 
-# x = int(sys.argv[1])-1
-x = 0
+x = int(sys.argv[1])-1
+#x = 0
 N, M, d = 10, 10000, 3
 W = np.random.randn(N, d)
 mean = [40, 300, 700]
