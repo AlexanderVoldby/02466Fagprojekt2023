@@ -30,12 +30,10 @@ hs1 = []
 ws1 = []
 for i in range(len(regs)):
     # Read the lists from "regularization_L1" file
-    with open(f"Results/Regularization2/L1_reg_{i}", "rb") as f:
-        regs1, exp_var, h, w = pickle.load(f)
+    with open(f"Results/Regularization3/L1_reg_{i}", "rb") as f:
+        reg, ev = pickle.load(f)
 
-    exp_var_L1.append(exp_var)
-    hs1.append(h)
-    ws1.append(w)
+    exp_var_L1.append(ev)
 
 
 exp_var_L2 = []
@@ -51,12 +49,10 @@ ws2 = []
 #         ws2.append(w)
 
 for i in range(len(regs)):
-    with open(f"Results/Regularization2/L2_reg_{i}", "rb") as fb:
-        regs2, exp_var, h, w = pickle.load(fb)
+    with open(f"Results/Regularization3/L2_reg_{i}", "rb") as fb:
+        reg, ev = pickle.load(fb)
 
-        exp_var_L2.append(exp_var)
-        hs2.append(h)
-        ws2.append(w)
+        exp_var_L2.append(ev)
 
 
 fig, ax = plt.subplots()

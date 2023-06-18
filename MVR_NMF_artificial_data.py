@@ -36,7 +36,7 @@ recon = np.matmul(W, H)
 ev = explained_variance(data, recon)
 print(f"Explained variance: {ev}")
 
-with open("Results/Regularization/artificial", "wb") as f:
+with open(f"Results/Regularization/L2_artificial_{x}", "wb") as f:
     pickle.dump((regs[x], ev), f)
 
 # with open("Results/Regularization/artificial", "rb") as f:
