@@ -31,7 +31,7 @@ data = np.matmul(W, H)
 
 regs = np.logspace(-20, 0, 20)
 print(f"Fitting reg = {regs[x]}")
-(W, H), loss = train_n_times(5, MVR_NMF, data, 3, regularization=regs[x])
+(W, H), loss = train_n_times(5, MVR_NMF, data, 3, regularization=regs[x], normalization=2)
 recon = np.matmul(W, H)
 ev = explained_variance(data, recon)
 print(f"Explained variance: {ev}")
