@@ -76,7 +76,7 @@ class NMF(torch.nn.Module):
 
 
 class MVR_NMF(torch.nn.Module):
-    def __init__(self, X, rank, regularization=1e-45, normalization=1, lr=100, alpha=1e-8, patience=5, factor=0.9):
+    def __init__(self, X, rank, regularization=1e-45, normalization=2, lr=0.1, alpha=1e-9, patience=5, factor=0.9):
         super().__init__()
 
         n_row, n_col = X.shape
