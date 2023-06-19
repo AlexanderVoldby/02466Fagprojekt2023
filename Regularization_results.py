@@ -2,9 +2,7 @@ import numpy as np
 import pickle
 import matplotlib.pyplot as plt
 
-lower = -50
-upper = -30
-regs = np.logspace(lower, upper, num=2*abs(lower-upper), endpoint=False)
+regs = np.logspace(-20, 0, 20)
 
 def plot_components(matrix, title):
     fig, ax = plt.subplots(1, matrix.shape[0])
@@ -25,15 +23,15 @@ def plot_components(matrix, title):
 #     hs1.append(h)
 #     ws1.append(w)
 
-exp_var_L1 = []
-hs1 = []
-ws1 = []
-for i in range(len(regs)):
-    # Read the lists from "regularization_L1" file
-    with open(f"Results/Regularization3/L1_reg_{i}", "rb") as f:
-        reg, ev = pickle.load(f)
-
-    exp_var_L1.append(ev)
+# exp_var_L1 = []
+# hs1 = []
+# ws1 = []
+# for i in range(len(regs)):
+#     # Read the lists from "regularization_L1" file
+#     with open(f"Results/Regularization3/L1_reg_{i}", "rb") as f:
+#         reg, ev = pickle.load(f)
+#
+#     exp_var_L1.append(ev)
 
 
 exp_var_L2 = []
@@ -49,21 +47,20 @@ ws2 = []
 #         ws2.append(w)
 
 for i in range(len(regs)):
-    with open(f"Results/Regularization3/L2_reg_{i}", "rb") as fb:
+    with open(f"Results/Regularization4/L2_artificial_{i}", "rb") as fb:
         reg, ev = pickle.load(fb)
-
         exp_var_L2.append(ev)
 
 
-fig, ax = plt.subplots()
-ax.plot(regs, exp_var_L1, marker="o", linestyle="--")
-ax.set_xlabel("Regularization Strength")
-ax.set_ylabel("Explained variance using L1 normalization")
-ax.set_xscale("log")
-plt.show()
+# fig, ax = plt.subplots()
+# ax.plot(regs, exp_var_L1, marker="o", linestyle="--")
+# ax.set_xlabel("Regularization Strength")
+# ax.set_ylabel("Explained variance using L1 normalization")
+# ax.set_xscale("log")
+# plt.show()
 
 fig, ax = plt.subplots()
-ax.plot(regs, exp_var_L2, marker="o", linestyle="--")
+ax.plot(regs[:15], exp_var_L2[:15], marker="o", linestyle="--")
 ax.set_xlabel("Regularization Strength")
 ax.set_ylabel("Explained variance using L2 normalization")
 ax.set_xscale("log")

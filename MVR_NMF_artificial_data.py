@@ -20,14 +20,14 @@ def plot_matrix(mat, title):
     plt.show()
 
 x = int(sys.argv[1])-1
-#x = 0
 N, M, d = 10, 10000, 3
 W = np.random.randn(N, d)
+W_norm = np.array([v / np.linalg.norm(v) for v in W])
 mean = [40, 300, 700]
 std = [10, 20, 7]
 t = np.arange(0, 1000, 0.1)
 H = np.array([gauss(m, s, t) for m, s in list(zip(mean, std))])
-data = np.matmul(W, H)
+data = np.matmul(W_norm, H)
 # print(f"Determinant volume approximation: {np.linalg.det(np.matmul(H, H.T))}")
 
 regs = np.logspace(-20, 0, 20)
