@@ -8,8 +8,8 @@ import pickle
 from torchNMF import MVR_NMF
 
 lower = -50
-upper = -30
-regs = np.logspace(lower, upper, num=2*abs(lower-upper), endpoint=False)
+upper = -10
+regs = np.logspace(lower, upper, num=40, endpoint=False)
 num_regs = len(regs)
 x = int(sys.argv[1])-1
 

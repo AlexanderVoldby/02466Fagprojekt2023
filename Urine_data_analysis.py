@@ -67,7 +67,7 @@ def shift_AA_dataset(data, C, S, tau):
 
 
 dir = "Results/urine_data/"
-rank = "_r5.txt"
+rank = "_r4.txt"
 shift_H = np.loadtxt(dir+"H_shift_nmf"+rank)
 shift_W = np.loadtxt(dir+"W_shift_nmf"+rank)
 shift_tau = np.loadtxt(dir+"tau_nmf"+rank, dtype=np.complex_)
