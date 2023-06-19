@@ -67,20 +67,21 @@ def shift_AA_dataset(data, C, S, tau):
 
 
 dir = "Results/urine_data/"
-shift_H = np.loadtxt(dir+"H_shift_nmf.txt")
-shift_W = np.loadtxt(dir+"W_shift_nmf.txt")
-shift_tau = np.loadtxt(dir+"tau_nmf.txt", dtype=np.complex_)
+rank = "_r5.txt"
+shift_H = np.loadtxt(dir+"H_shift_nmf"+rank)
+shift_W = np.loadtxt(dir+"W_shift_nmf"+rank)
+shift_tau = np.loadtxt(dir+"tau_nmf"+rank, dtype=np.complex_)
 shift_tau = shift_tau
-shift_C = np.loadtxt(dir+"C_shift_AA.txt")
-shift_S = np.loadtxt(dir+"S_shift_AA.txt")
-shift_AA_tau = np.loadtxt(dir+"tau_AA.txt", dtype=np.complex_)
+shift_C = np.loadtxt(dir+"C_shift_AA"+rank)
+shift_S = np.loadtxt(dir+"S_shift_AA"+rank)
+shift_AA_tau = np.loadtxt(dir+"tau_AA"+rank, dtype=np.complex_)
 shift_AA_tau = shift_AA_tau
 
-AA_C = np.loadtxt(dir+"C_reg_AA.txt")
-AA_S = np.loadtxt(dir+"S_reg_AA.txt")
+AA_C = np.loadtxt(dir+"C_reg_AA"+rank)
+AA_S = np.loadtxt(dir+"S_reg_AA"+rank)
 
-NMF_H = np.loadtxt(dir+"H_reg_nmf.txt")
-NMF_W = np.loadtxt(dir+"W_reg_nmf.txt")
+NMF_H = np.loadtxt(dir+"H_reg_nmf"+rank)
+NMF_W = np.loadtxt(dir+"W_reg_nmf"+rank)
 
 # W = np.loadtxt(dir+"W_true.txt")
 # H = np.loadtxt(dir+"H_true.txt")
@@ -121,18 +122,18 @@ print(f"AA: {exp_var_AA}")
 # print(f"NMF: {NMI(W, AA_S)}")
 # print(f"AA: {NMI(W, NMF_W)}")
 
-plot_latent_components(NMF_H, ["1", "2", "3"], "Latent components found by NMF")
+plot_latent_components(NMF_H, ["c"]*len(NMF_H), "Latent components found by NMF", figsize=(10, 8))
 plot_data(NMF_recon, "Dataset reconstructed by NMF")
 
-plot_latent_components(AA_comp, ["1", "2", "3"], "Latent components found by AA")
+plot_latent_components(AA_comp, ["c"]*len(AA_comp), "Latent components found by AA", figsize=(10, 8))
 plot_data(AA_recon, "Dataset reconstructed by AA")
 
-plot_latent_components(shift_H, ["1", "2", "3"], "Latent components found by shiftNMF")
+plot_latent_components(shift_H, ["c"]*len(shift_H), "Latent components found by shiftNMF", figsize=(10, 8))
 plot_data(shift_NMF_recon, "Dataset reconstructed by shiftNMF")
 plot_matrix(shift_W, "Mixing determined by shiftNMF")
 plot_matrix(shift_tau.real, "Shifts determined by shiftNMF")
 
-plot_latent_components(shiftAA_comp, ["1", "2", "3"], "Latent components found by shiftAA")
+plot_latent_components(shiftAA_comp, ["c"]*len(shiftAA_comp), "Latent components found by shiftAA", figsize=(10, 8))
 plot_data(shift_AA_recon.real, "Dataset reconstructed by shiftAA")
 plot_matrix(shift_S, "Mixing determined by shiftAA")
 plot_matrix(shift_AA_tau.real, "Shifts determined by shiftAA")

@@ -20,9 +20,11 @@ def plot_matrix(mat, title):
     plt.show()
 
 
-def plot_latent_components(matrix, labs, title):
+def plot_latent_components(matrix, labs, title, figsize=(6.4, 4.8)):
     n = matrix.shape[0]
     fig, axs = plt.subplots(1, n, sharey=True)
+    w, h = figsize
+    fig.set_size_inches(w, h)
     for i in range(n):
         axs[i].plot(matrix[i])
         axs[i].set_title(labs[i])

@@ -76,7 +76,7 @@ class NMF(torch.nn.Module):
 
 
 class MVR_NMF(torch.nn.Module):
-    def __init__(self, X, rank, regularization=1e-45, normalization=1, lr=100, alpha=1e-8, patience=5, factor=0.9):
+    def __init__(self, X, rank, regularization=1e-45, normalization=2, lr=0.1, alpha=1e-9, patience=5, factor=0.9):
         super().__init__()
 
         n_row, n_col = X.shape
@@ -153,14 +153,16 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     import numpy as np
 
-    mat = scipy.io.loadmat('helpers/data/NMR_mix_DoE.mat')
-
-    X = mat.get('xData')
-    targets = mat.get('yData')
-    target_labels = mat.get('yLabels')
-    axis = mat.get("Axis")
-    mvr_nmf = MVR_NMF(X, 3)
-    W, H = mvr_nmf.fit(verbose=True)
+    # mat = scipy.io.loadmat('helpers/data/NMR_mix_DoE.mat')
+    
+    # X = mat.get('xData')
+    # targets = mat.get('yData')
+    # target_labels = mat.get('yLabels')
+    # axis = mat.get("Axis")
+    X = X_clean
+    alpha = 1e-5
+    nmf = NMF(X, 6, lr=1, alpha = alpha, factor=1, patience=10)
+    W, H = nmf.fit(verbose=True)
     print(f"Explained variance MVR_NMF: {explained_variance(X, np.matmul(W, H))}")
     plt.figure()
     for vec in H:
