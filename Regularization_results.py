@@ -2,7 +2,8 @@ import numpy as np
 import pickle
 import matplotlib.pyplot as plt
 
-regs = np.logspace(-20, 0, 20)
+# regs = np.logspace(-20, 0, 20)
+regs = np.logspace(-50, -30, num=40)
 
 def plot_components(matrix, title):
     fig, ax = plt.subplots(1, matrix.shape[0])
@@ -47,8 +48,8 @@ ws2 = []
 #         ws2.append(w)
 
 for i in range(len(regs)):
-    with open(f"Results/Regularization4/L2_artificial_{i}", "rb") as fb:
-        reg, ev = pickle.load(fb)
+    with open(f"Results/Regularization6/L2_reg_{i}", "rb") as fb:
+        reg, ev, w, h = pickle.load(fb)
         exp_var_L2.append(ev)
 
 
@@ -60,7 +61,7 @@ for i in range(len(regs)):
 # plt.show()
 
 fig, ax = plt.subplots()
-ax.plot(regs[:15], exp_var_L2[:15], marker="o", linestyle="--")
+ax.plot(regs, exp_var_L2, marker="o", linestyle="--")
 ax.set_xlabel("Regularization Strength")
 ax.set_ylabel("Explained variance using L2 normalization")
 ax.set_xscale("log")

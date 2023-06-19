@@ -98,7 +98,7 @@ class MVR_NMF(torch.nn.Module):
 
 
         if self.normalization == 2:
-            W = F.normalize(self.softplus(self.W), p=1, dim=1)
+            W = F.normalize(self.softplus(self.W), p=2, dim=1)
         elif self.normalization == 1:
             W = self.softmax(self.W)
         else:
@@ -153,15 +153,15 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     import numpy as np
 
-    # mat = scipy.io.loadmat('helpers/data/NMR_mix_DoE.mat')
+    mat = scipy.io.loadmat('helpers/data/NMR_mix_DoE.mat')
     
-    # X = mat.get('xData')
-    # targets = mat.get('yData')
-    # target_labels = mat.get('yLabels')
-    # axis = mat.get("Axis")
-    X = X_clean
-    alpha = 1e-5
-    nmf = NMF(X, 6, lr=1, alpha = alpha, factor=1, patience=10)
+    X = mat.get('xData')
+    targets = mat.get('yData')
+    target_labels = mat.get('yLabels')
+    axis = mat.get("Axis")
+    # X = X_clean
+    alpha = 1e-7
+    nmf = MVR_NMF(X, 3, lr=10, alpha = alpha, factor=0.9, patience=10, regularization=1e-40)
     W, H = nmf.fit(verbose=True)
     print(f"Explained variance MVR_NMF: {explained_variance(X, np.matmul(W, H))}")
     plt.figure()
